@@ -9,6 +9,9 @@ import SwiftUI
 import CoreData
 import UIKit
 
+import SwiftUI
+import UIKit
+
 // MARK: - ViewController (UITextView)
 class ViewController: UIViewController, UITextViewDelegate {
 
@@ -76,7 +79,7 @@ class ViewController: UIViewController, UITextViewDelegate {
               let image = attachment.image
         else { return }
 
-        // ✅ ビヨンアニメーション
+        // ビヨンアニメーション
         let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: characterIndex, length: 1),
                                                          in: textContainer)
         var startFrame = frameInTextView
@@ -104,19 +107,21 @@ class ViewController: UIViewController, UITextViewDelegate {
     }
 }
 
-// MARK: - Image Gallery
+// MARK: - Image Gallery with Swipe-to-Dismiss
 class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
     var images: [UIImage]
     var initialIndex: Int
     private var collectionView: UICollectionView!
 
+    // 下スワイプ用
+    private var panStartCenter: CGPoint = .zero
+
     init(images: [UIImage], initialIndex: Int) {
         self.images = images
         self.initialIndex = initialIndex
         super.init(nibName: nil, bundle: nil)
     }
-
     required init?(coder: NSCoder) { fatalError() }
 
     override func viewDidLoad() {
@@ -143,6 +148,10 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
                                     at: .centeredHorizontally, animated: false)
 
         addCloseButton()
+
+        // 下スワイプジェスチャー
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        view.addGestureRecognizer(pan)
     }
 
     private func addCloseButton() {
@@ -159,6 +168,7 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
         dismiss(animated: true)
     }
 
+    // MARK: - UICollectionView
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         images.count
     }
@@ -168,6 +178,34 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! ImageZoomCell
         cell.configure(with: images[indexPath.item])
         return cell
+    }
+
+    // MARK: - 下スワイプ処理
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let translation = gesture.translation(in: view)
+
+        switch gesture.state {
+        case .began:
+            panStartCenter = view.center
+        case .changed:
+            if translation.y > 0 {
+                view.center = CGPoint(x: panStartCenter.x, y: panStartCenter.y + translation.y)
+                
+                // 背景フェード
+                let alpha = max(0.3, 1 - (translation.y / 500))
+                view.backgroundColor = UIColor.black.withAlphaComponent(alpha)
+            }
+        case .ended, .cancelled:
+            if translation.y > 150 {
+                dismiss(animated: true)
+            } else {
+                UIView.animate(withDuration: 0.2) {
+                    self.view.center = self.panStartCenter
+                    self.view.backgroundColor = .black
+                }
+            }
+        default: break
+        }
     }
 }
 
@@ -217,3 +255,4 @@ struct ContentView: View {
             .edgesIgnoringSafeArea(.all)
     }
 }
+
