@@ -9,8 +9,9 @@ import SwiftUI
 import CoreData
 import UIKit
 
-// MARK: - ViewController (UIKit)
+// MARK: - ViewController (UITextView)
 class ViewController: UIViewController, UITextViewDelegate {
+
     let textView = UITextView()
     var attachments: [NSTextAttachment] = []
 
@@ -18,11 +19,11 @@ class ViewController: UIViewController, UITextViewDelegate {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        // UITextView 設定
         textView.isEditable = false
         textView.isScrollEnabled = true
         textView.delegate = self
         textView.translatesAutoresizingMaskIntoConstraints = false
+        textView.backgroundColor = .systemGray6
         view.addSubview(textView)
 
         NSLayoutConstraint.activate([
@@ -32,21 +33,19 @@ class ViewController: UIViewController, UITextViewDelegate {
             textView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
         ])
 
-        // NSMutableAttributedString に文字と画像を追加
         let attr = NSMutableAttributedString(string: "Tap images below:\n\n")
         for i in 1...3 {
-            guard let image = UIImage(named: "sample\(i)") else {
-                print("sample\(i) not found")
-                continue
-            }
+            // デフォルト画像を使用（Assets になければシステムアイコン）
+            let image = UIImage(named: "sample\(i)") ?? UIImage(systemName: "photo")!
 
             let attachment = NSTextAttachment()
             attachment.image = image
 
-            // 幅 150px にリサイズして高さをアスペクト比で計算
             let maxWidth: CGFloat = 150
+            let maxHeight: CGFloat = 200
             let ratio = image.size.height / image.size.width
-            attachment.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: maxWidth * ratio)
+            let height = min(maxWidth * ratio, maxHeight)
+            attachment.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: height)
 
             attachments.append(attachment)
             attr.append(NSAttributedString(attachment: attachment))
@@ -55,7 +54,6 @@ class ViewController: UIViewController, UITextViewDelegate {
 
         textView.attributedText = attr
 
-        // タップジェスチャー
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         textView.addGestureRecognizer(tap)
     }
@@ -69,27 +67,23 @@ class ViewController: UIViewController, UITextViewDelegate {
         let layoutManager = textView.layoutManager
         let textContainer = textView.textContainer
 
-        // タップ位置から文字インデックスを取得
         let characterIndex = layoutManager.characterIndex(for: loc,
                                                           in: textContainer,
                                                           fractionOfDistanceBetweenInsertionPoints: nil)
 
-        // インデックス範囲内で attachment を取得
         if characterIndex < textView.attributedText.length,
-           let attachment = textView.attributedText.attribute(.attachment,
-                                                              at: characterIndex,
-                                                              effectiveRange: nil) as? NSTextAttachment,
+           let attachment = textView.attributedText.attribute(.attachment, at: characterIndex, effectiveRange: nil) as? NSTextAttachment,
            let tappedIndex = attachments.firstIndex(of: attachment) {
 
             let images = attachments.compactMap { $0.image }
             let zoomVC = ImageGalleryViewController(images: images, initialIndex: tappedIndex)
-            zoomVC.modalPresentationStyle = .overFullScreen // 型を明示
+            zoomVC.modalPresentationStyle = .overFullScreen
             present(zoomVC, animated: true)
         }
     }
-
 }
 
+// MARK: - Image Gallery (UICollectionView)
 class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
     var images: [UIImage]
@@ -101,7 +95,8 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
         self.initialIndex = initialIndex
         super.init(nibName: nil, bundle: nil)
     }
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    required init?(coder: NSCoder) { fatalError() }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -140,10 +135,9 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
     }
 
     @objc private func close() {
-        dismiss(animated: false)
+        dismiss(animated: true)
     }
 
-    // MARK: - CollectionView
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         images.count
     }
@@ -156,6 +150,7 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
     }
 }
 
+// MARK: - Zoomable Cell
 class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
@@ -175,42 +170,29 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
         scrollView.addSubview(imageView)
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    required init?(coder: NSCoder) { fatalError() }
 
     func configure(with image: UIImage) {
         imageView.image = image
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-        return imageView
+        imageView
     }
 }
 
-//
+// MARK: - SwiftUI Wrapper
+struct ListVCWrapper: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let vc = ViewController()
+        return UINavigationController(rootViewController: vc)
+    }
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+}
 
-// SwiftUI Preview / 使用例
 struct ContentView: View {
     var body: some View {
-        //NavigationView {
-            ListVCWrapper()
-                //.navigationTitle("Detail")
-        //}
-    }
-}
-
-// ListViewController 用ラッパー
-struct ListVCWrapper: UIViewControllerRepresentable {
-
-    @Environment(\.managedObjectContext) var context
-
-    func makeUIViewController(context: Context) -> UINavigationController {
-        let folderVC = ViewController()
-        //folderVC.context = self.context
-        let nav = UINavigationController(rootViewController: folderVC)
-        return nav
-    }
-
-    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {
-        // 必要があれば更新
+        ListVCWrapper()
+            .edgesIgnoringSafeArea(.all)
     }
 }
