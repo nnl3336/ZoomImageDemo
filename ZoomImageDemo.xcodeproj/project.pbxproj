@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1879CA992EC44B8400D37A69 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1879CA912EC44B8400D37A69 /* ContentView.swift */; };
+		1879CAA42EC44C7B00D37A69 /* ImageGalleryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1879CAA32EC44C7B00D37A69 /* ImageGalleryViewController.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1879CA5F2EC42B9D00D37A69 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +32,8 @@
 		1879CA482EC42B9B00D37A69 /* ZoomImageDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoomImageDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1879CA5E2EC42B9D00D37A69 /* ZoomImageDemoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoomImageDemoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1879CA682EC42B9D00D37A69 /* ZoomImageDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoomImageDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1879CA912EC44B8400D37A69 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1879CAA32EC44C7B00D37A69 /* ImageGalleryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageGalleryViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +82,8 @@
 		1879CA3F2EC42B9B00D37A69 = {
 			isa = PBXGroup;
 			children = (
+				1879CA912EC44B8400D37A69 /* ContentView.swift */,
+				1879CAA32EC44C7B00D37A69 /* ImageGalleryViewController.swift */,
 				1879CA4A2EC42B9B00D37A69 /* ZoomImageDemo */,
 				1879CA612EC42B9D00D37A69 /* ZoomImageDemoTests */,
 				1879CA6B2EC42B9D00D37A69 /* ZoomImageDemoUITests */,
@@ -236,6 +245,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1879CA992EC44B8400D37A69 /* ContentView.swift in Sources */,
+				1879CAA42EC44C7B00D37A69 /* ImageGalleryViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
