@@ -35,7 +35,6 @@ class ViewController: UIViewController, UITextViewDelegate {
 
         let attr = NSMutableAttributedString(string: "Tap images below:\n\n")
         for i in 1...3 {
-            // デフォルト画像を使用（Assets になければシステムアイコン）
             let image = UIImage(named: "sample\(i)") ?? UIImage(systemName: "photo")!
 
             let attachment = NSTextAttachment()
@@ -71,19 +70,41 @@ class ViewController: UIViewController, UITextViewDelegate {
                                                           in: textContainer,
                                                           fractionOfDistanceBetweenInsertionPoints: nil)
 
-        if characterIndex < textView.attributedText.length,
-           let attachment = textView.attributedText.attribute(.attachment, at: characterIndex, effectiveRange: nil) as? NSTextAttachment,
-           let tappedIndex = attachments.firstIndex(of: attachment) {
+        guard characterIndex < textView.attributedText.length,
+              let attachment = textView.attributedText.attribute(.attachment, at: characterIndex, effectiveRange: nil) as? NSTextAttachment,
+              let tappedIndex = attachments.firstIndex(of: attachment),
+              let image = attachment.image
+        else { return }
 
-            let images = attachments.compactMap { $0.image }
-            let zoomVC = ImageGalleryViewController(images: images, initialIndex: tappedIndex)
+        // ✅ ビヨンアニメーション
+        let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: characterIndex, length: 1),
+                                                         in: textContainer)
+        var startFrame = frameInTextView
+        startFrame.origin.x += textView.textContainerInset.left
+        startFrame.origin.y += textView.textContainerInset.top
+        startFrame = textView.convert(startFrame, to: view)
+
+        let imageView = UIImageView(image: image)
+        imageView.contentMode = .scaleAspectFit
+        imageView.frame = startFrame
+        imageView.clipsToBounds = true
+        view.addSubview(imageView)
+
+        let finalFrame = view.bounds
+
+        UIView.animate(withDuration: 0.3, animations: {
+            imageView.frame = finalFrame
+        }, completion: { _ in
+            imageView.removeFromSuperview()
+            let zoomVC = ImageGalleryViewController(images: self.attachments.compactMap { $0.image },
+                                                     initialIndex: tappedIndex)
             zoomVC.modalPresentationStyle = .overFullScreen
-            present(zoomVC, animated: true)
-        }
+            self.present(zoomVC, animated: false)
+        })
     }
 }
 
-// MARK: - Image Gallery (UICollectionView)
+// MARK: - Image Gallery
 class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
     var images: [UIImage]
