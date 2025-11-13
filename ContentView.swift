@@ -71,6 +71,7 @@ class ViewController: UIViewController, UITextViewDelegate {
     }
 }
 
+
 // MARK: - ギャラリー
 // MARK: - GalleryViewController
 class GalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
