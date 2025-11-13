@@ -181,14 +181,16 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             isDraggingToDismiss = true
             collectionView.isScrollEnabled = false
         case .changed:
+            // view 自体を移動
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            // 親ビューに通知して alpha を変更
-            onPanChanged?(translation.y)
 
-            // 画像自体もフェード
+            // 下スワイプ量に応じて全体 alpha を変更
             let progress = min(1, abs(translation.y) / 400)
-            collectionView.alpha = 1 - progress
+            view.alpha = 1 - progress
+
+            // 親ビューのフェードも同時に通知
+            onPanChanged?(translation.y)
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
             isDraggingToDismiss = false
@@ -197,7 +199,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
-                    self.collectionView.alpha = 0
+                    self.view.alpha = 0
                 }, completion: { _ in
                     self.dismiss(animated: false) {
                         self.onDismiss?()
@@ -206,7 +208,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.collectionView.alpha = 1
+                    self.view.alpha = 1
                     self.onPanChanged?(0)
                 }
             }
