@@ -21,7 +21,7 @@ class ViewController: UIViewController, UITextViewDelegate {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        textView.isEditable = false
+        textView.isEditable = true
         textView.isScrollEnabled = true
         textView.delegate = self
         textView.translatesAutoresizingMaskIntoConstraints = false
@@ -46,6 +46,7 @@ class ViewController: UIViewController, UITextViewDelegate {
         textView.attributedText = attr
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        tap.delegate = self
         textView.addGestureRecognizer(tap)
     }
 
@@ -68,6 +69,21 @@ class ViewController: UIViewController, UITextViewDelegate {
         let gallery = GalleryViewController(images: attachments.compactMap { $0.image }, initialIndex: tappedIndex)
         gallery.modalPresentationStyle = .overFullScreen
         present(gallery, animated: false)
+    }
+}
+extension ViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        let location = touch.location(in: textView)
+        let index = textView.layoutManager.characterIndex(
+            for: location,
+            in: textView.textContainer,
+            fractionOfDistanceBetweenInsertionPoints: nil
+        )
+        // NSTextAttachment の上だけ反応させる
+        if let _ = textView.attributedText.attribute(.attachment, at: index, effectiveRange: nil) as? NSTextAttachment {
+            return true
+        }
+        return false
     }
 }
 
