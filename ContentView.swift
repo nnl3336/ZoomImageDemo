@@ -156,28 +156,28 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .changed:
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            // 縦移動量に応じて背景フェード
-            let alpha = max(0.2, 1 - abs(translation.y) / 400)
-            dimmingView.alpha = alpha
+            // 🔹 背景は常に黒なので alpha は変更しない
+            // dimmingView.alpha = 1  // この行は不要なので削除またはコメントアウト
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
             isDraggingToDismiss = false
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
-                    self.dimmingView.alpha = 0
+                    self.dimmingView.alpha = 1 // 背景は黒のまま
                 }, completion: { _ in
                     self.dismiss(animated: false)
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.dimmingView.alpha = 1
+                    self.dimmingView.alpha = 1 // 背景は黒のまま
                 }
             }
         default: break
         }
     }
+
 
     private func addCloseButton() {
         let btn = UIButton(type: .system)
