@@ -72,17 +72,22 @@ class ViewController: UIViewController, UITextViewDelegate {
 }
 
 // MARK: - ギャラリー
-class GalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIGestureRecognizerDelegate {
+// MARK: - GalleryViewController
+class GalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
 
     var images: [UIImage]
     var initialIndex: Int
     private var collectionView: UICollectionView!
+
+    // フリーフロート用
     private var panStartCenter: CGPoint = .zero
+    private var isDraggingToDismiss = false
 
     init(images: [UIImage], initialIndex: Int) {
         self.images = images
         self.initialIndex = initialIndex
         super.init(nibName: nil, bundle: nil)
+        modalPresentationStyle = .overFullScreen
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -90,36 +95,31 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         super.viewDidLoad()
         view.backgroundColor = .black
 
+        // UICollectionView セットアップ
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
-        layout.itemSize = view.bounds.size
         layout.minimumLineSpacing = 0
+        layout.itemSize = view.bounds.size
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
+        collectionView.backgroundColor = .black
         collectionView.isPagingEnabled = true
-        collectionView.backgroundColor = .clear
+        collectionView.showsHorizontalScrollIndicator = false
         collectionView.dataSource = self
         collectionView.delegate = self
-        collectionView.register(GalleryCell.self, forCellWithReuseIdentifier: "cell")
+        collectionView.register(ImageZoomCell.self, forCellWithReuseIdentifier: "cell")
+        collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(collectionView)
-        collectionView.scrollToItem(at: IndexPath(item: initialIndex, section: 0), at: .centeredHorizontally, animated: false)
 
-        // 下スワイプジェスチャー
+        collectionView.scrollToItem(at: IndexPath(item: initialIndex, section: 0),
+                                    at: .centeredHorizontally, animated: false)
+
+        addCloseButton()
+
+        // 下スワイプ＋フリーフロート
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-        pan.delegate = self
         view.addGestureRecognizer(pan)
     }
-
-    // UICollectionView
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { images.count }
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! GalleryCell
-        cell.setImage(images[indexPath.item])
-        return cell
-    }
-
-    // 横スワイプと下スワイプの共存
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool { true }
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view)
@@ -128,12 +128,16 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         switch gesture.state {
         case .began:
             panStartCenter = view.center
+            isDraggingToDismiss = true
+            collectionView.isScrollEnabled = false
         case .changed:
-            if translation.y > 0 {
-                view.center = CGPoint(x: panStartCenter.x + translation.x, y: panStartCenter.y + translation.y)
-                view.backgroundColor = UIColor.black.withAlphaComponent(max(0.2, 1 - translation.y/400))
-            }
+            view.center = CGPoint(x: panStartCenter.x + translation.x,
+                                  y: panStartCenter.y + translation.y)
+            view.backgroundColor = UIColor.black.withAlphaComponent(max(0.3, 1 - abs(translation.y) / 400))
         case .ended, .cancelled:
+            collectionView.isScrollEnabled = true
+            isDraggingToDismiss = false
+
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
@@ -149,6 +153,71 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             }
         default: break
         }
+    }
+
+    private func addCloseButton() {
+        let btn = UIButton(type: .system)
+        btn.setTitle("×", for: .normal)
+        btn.titleLabel?.font = UIFont.systemFont(ofSize: 30)
+        btn.tintColor = .white
+        btn.frame = CGRect(x: 20, y: 40, width: 50, height: 40)
+        btn.addTarget(self, action: #selector(close), for: .touchUpInside)
+        view.addSubview(btn)
+    }
+
+    @objc private func close() {
+        dismiss(animated: true)
+    }
+
+    // MARK: - UICollectionViewDataSource
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        images.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView,
+                        cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! ImageZoomCell
+        cell.configure(with: images[indexPath.item])
+        return cell
+    }
+
+    // MARK: - UICollectionViewDelegateFlowLayout
+    func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool { true }
+
+    func scrollViewShouldScroll(_ scrollView: UIScrollView) -> Bool {
+        // 縦ドラッグ中は横スクロール禁止
+        return !isDraggingToDismiss
+    }
+}
+
+// MARK: - Zoomable Cell
+class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
+    private let scrollView = UIScrollView()
+    private let imageView = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        scrollView.frame = contentView.bounds
+        scrollView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        scrollView.minimumZoomScale = 1
+        scrollView.maximumZoomScale = 3
+        scrollView.delegate = self
+        contentView.addSubview(scrollView)
+
+        imageView.contentMode = .scaleAspectFit
+        imageView.frame = scrollView.bounds
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        scrollView.addSubview(imageView)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func configure(with image: UIImage) {
+        imageView.image = image
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        imageView
     }
 }
 
