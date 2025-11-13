@@ -97,11 +97,13 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         super.viewDidLoad()
         view.backgroundColor = .clear
 
-        // 背景ビュー
-        dimmingView.frame = view.bounds
-        dimmingView.backgroundColor = .black
-        dimmingView.alpha = 1
-        view.addSubview(dimmingView)
+        // 背景フェードビューを最背面に
+        if let parentView = presentingViewController?.view {
+            dimmingView.frame = parentView.bounds
+            dimmingView.backgroundColor = .black
+            dimmingView.alpha = 0
+            parentView.addSubview(dimmingView)
+        }
 
         // UICollectionView
         let layout = UICollectionViewFlowLayout()
@@ -126,6 +128,11 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         // 下スワイプ用
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         view.addGestureRecognizer(pan)
+
+        // 表示時フェードイン
+        UIView.animate(withDuration: 0.25) {
+            self.dimmingView.alpha = 0.6
+        }
     }
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
@@ -136,12 +143,12 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .began:
             panStartCenter = view.center
             isDraggingToDismiss = true
-            collectionView.isScrollEnabled = false // 横スクロール無効化
+            collectionView.isScrollEnabled = false
         case .changed:
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            // 縦移動量に応じて背景フェード
-            let alpha = max(0.2, 1 - abs(translation.y) / 400)
+            // 背景フェードは縦移動量に応じて
+            let alpha = max(0, 0.6 * (1 - abs(translation.y) / 300))
             dimmingView.alpha = alpha
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
@@ -151,17 +158,19 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
                     self.view.center.y += self.view.frame.height
                     self.dimmingView.alpha = 0
                 }, completion: { _ in
+                    self.dimmingView.removeFromSuperview()
                     self.dismiss(animated: false)
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.dimmingView.alpha = 1
+                    self.dimmingView.alpha = 0.6
                 }
             }
         default: break
         }
     }
+
 
     private func addCloseButton() {
         let btn = UIButton(type: .system)
