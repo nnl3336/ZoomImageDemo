@@ -9,102 +9,100 @@ import SwiftUI
 import CoreData
 import UIKit
 
-import SwiftUI
-import UIKit
 
 // MARK: - ViewController (UITextView)
 class ViewController: UIViewController, UITextViewDelegate {
-
+    
     let textView = UITextView()
     var attachments: [NSTextAttachment] = []
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-
+        
         textView.isEditable = false
         textView.isScrollEnabled = true
         textView.delegate = self
         textView.translatesAutoresizingMaskIntoConstraints = false
         textView.backgroundColor = .systemGray6
         view.addSubview(textView)
-
+        
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             textView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
         ])
-
+        
         let attr = NSMutableAttributedString(string: "Tap images below:\n\n")
         for i in 1...3 {
             let image = UIImage(named: "sample\(i)") ?? UIImage(systemName: "photo")!
-
+            
             let attachment = NSTextAttachment()
             attachment.image = image
-
+            
             let maxWidth: CGFloat = 150
             let maxHeight: CGFloat = 200
             let ratio = image.size.height / image.size.width
             let height = min(maxWidth * ratio, maxHeight)
             attachment.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: height)
-
+            
             attachments.append(attachment)
             attr.append(NSAttributedString(attachment: attachment))
             attr.append(NSAttributedString(string: "\n\n"))
         }
-
+        
         textView.attributedText = attr
-
+        
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         textView.addGestureRecognizer(tap)
     }
-
+    
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         let location = gesture.location(in: textView)
         var loc = location
         loc.x -= textView.textContainerInset.left
         loc.y -= textView.textContainerInset.top
-
+        
         let layoutManager = textView.layoutManager
         let textContainer = textView.textContainer
-
+        
         let characterIndex = layoutManager.characterIndex(for: loc,
                                                           in: textContainer,
                                                           fractionOfDistanceBetweenInsertionPoints: nil)
-
+        
         guard characterIndex < textView.attributedText.length,
               let attachment = textView.attributedText.attribute(.attachment, at: characterIndex, effectiveRange: nil) as? NSTextAttachment,
               let tappedIndex = attachments.firstIndex(of: attachment),
               let image = attachment.image
         else { return }
-
-        // ビヨンアニメーション
+        
+        // 🔹 拡大開始位置（textView内の画像位置）
         let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: characterIndex, length: 1),
                                                          in: textContainer)
         var startFrame = frameInTextView
         startFrame.origin.x += textView.textContainerInset.left
         startFrame.origin.y += textView.textContainerInset.top
         startFrame = textView.convert(startFrame, to: view)
-
+        
+        // 🔹 拡大先VC
+        let zoomVC = ImageGalleryViewController(images: attachments.compactMap { $0.image },
+                                                initialIndex: tappedIndex)
+        
+        // ✅ カスタムトランジション設定
+        let transitionDelegate = ZoomTransitionDelegate()
+        transitionDelegate.animator.originFrame = startFrame
+        
         let imageView = UIImageView(image: image)
         imageView.contentMode = .scaleAspectFit
-        imageView.frame = startFrame
-        imageView.clipsToBounds = true
-        view.addSubview(imageView)
-
-        let finalFrame = view.bounds
-
-        UIView.animate(withDuration: 0.3, animations: {
-            imageView.frame = finalFrame
-        }, completion: { _ in
-            imageView.removeFromSuperview()
-            let zoomVC = ImageGalleryViewController(images: self.attachments.compactMap { $0.image },
-                                                     initialIndex: tappedIndex)
-            zoomVC.modalPresentationStyle = .overFullScreen
-            self.present(zoomVC, animated: false)
-        })
+        transitionDelegate.animator.imageView = imageView
+        
+        zoomVC.transitioningDelegate = transitionDelegate
+        zoomVC.modalPresentationStyle = .custom
+        
+        present(zoomVC, animated: true)
     }
+    
 }
 
 // MARK: - Image Gallery with Swipe-to-Dismiss
@@ -240,6 +238,69 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
     }
 }
 
+class ZoomTransitionDelegate: NSObject, UIViewControllerTransitioningDelegate {
+    let animator = ZoomAnimator()
+
+    func animationController(forPresented presented: UIViewController,
+                             presenting: UIViewController,
+                             source: UIViewController)
+    -> UIViewControllerAnimatedTransitioning? {
+        animator.isPresenting = true
+        return animator
+    }
+
+    func animationController(forDismissed dismissed: UIViewController)
+    -> UIViewControllerAnimatedTransitioning? {
+        animator.isPresenting = false
+        return animator
+    }
+}
+
+class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
+    var isPresenting = true
+    var originFrame = CGRect.zero
+    var imageView: UIImageView?
+
+    func transitionDuration(using ctx: UIViewControllerContextTransitioning?) -> TimeInterval {
+        return 0.35
+    }
+
+    func animateTransition(using ctx: UIViewControllerContextTransitioning) {
+        guard let toVC = ctx.viewController(forKey: .to),
+              let fromVC = ctx.viewController(forKey: .from),
+              let imageView = imageView else { return }
+
+        let container = ctx.containerView
+
+        if isPresenting {
+            let snapshot = UIImageView(image: imageView.image)
+            snapshot.contentMode = .scaleAspectFit
+            snapshot.frame = originFrame
+            container.addSubview(snapshot)
+            toVC.view.alpha = 0
+            container.addSubview(toVC.view)
+
+            UIView.animate(withDuration: 0.35,
+                           delay: 0,
+                           usingSpringWithDamping: 0.9,
+                           initialSpringVelocity: 0.6) {
+                snapshot.frame = container.bounds
+                toVC.view.alpha = 1
+            } completion: { _ in
+                snapshot.removeFromSuperview()
+                ctx.completeTransition(true)
+            }
+        } else {
+            UIView.animate(withDuration: 0.3) {
+                fromVC.view.alpha = 0
+            } completion: { _ in
+                ctx.completeTransition(true)
+            }
+        }
+    }
+}
+
+
 // MARK: - SwiftUI Wrapper
 struct ListVCWrapper: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UINavigationController {
@@ -255,4 +316,3 @@ struct ContentView: View {
             .edgesIgnoringSafeArea(.all)
     }
 }
-

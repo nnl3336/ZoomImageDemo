@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1861DF812EC5761E002E6AE5 /* ZoomTransitionDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1861DF802EC5761E002E6AE5 /* ZoomTransitionDelegate.swift */; };
 		1879CA992EC44B8400D37A69 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1879CA912EC44B8400D37A69 /* ContentView.swift */; };
 		1879CAA42EC44C7B00D37A69 /* ImageGalleryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1879CAA32EC44C7B00D37A69 /* ImageGalleryViewController.swift */; };
 /* End PBXBuildFile section */
@@ -29,6 +30,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1861DF802EC5761E002E6AE5 /* ZoomTransitionDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomTransitionDelegate.swift; sourceTree = "<group>"; };
 		1879CA482EC42B9B00D37A69 /* ZoomImageDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZoomImageDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1879CA5E2EC42B9D00D37A69 /* ZoomImageDemoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoomImageDemoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1879CA682EC42B9D00D37A69 /* ZoomImageDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZoomImageDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -84,6 +86,7 @@
 			children = (
 				1879CA912EC44B8400D37A69 /* ContentView.swift */,
 				1879CAA32EC44C7B00D37A69 /* ImageGalleryViewController.swift */,
+				1861DF802EC5761E002E6AE5 /* ZoomTransitionDelegate.swift */,
 				1879CA4A2EC42B9B00D37A69 /* ZoomImageDemo */,
 				1879CA612EC42B9D00D37A69 /* ZoomImageDemoTests */,
 				1879CA6B2EC42B9D00D37A69 /* ZoomImageDemoUITests */,
@@ -245,6 +248,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1861DF812EC5761E002E6AE5 /* ZoomTransitionDelegate.swift in Sources */,
 				1879CA992EC44B8400D37A69 /* ContentView.swift in Sources */,
 				1879CAA42EC44C7B00D37A69 /* ImageGalleryViewController.swift in Sources */,
 			);
