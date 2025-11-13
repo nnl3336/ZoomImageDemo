@@ -9,13 +9,11 @@ import SwiftUI
 import CoreData
 import UIKit
 
-
-// MARK: - ViewController (UITextView)
+// MARK: - メインVC
 class ViewController: UIViewController, UITextViewDelegate {
 
     let textView = UITextView()
     var attachments: [NSTextAttachment] = []
-    let transitionDelegate = ZoomTransitionDelegate()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -37,19 +35,13 @@ class ViewController: UIViewController, UITextViewDelegate {
         let attr = NSMutableAttributedString(string: "Tap images below:\n\n")
         for i in 1...3 {
             let image = UIImage(named: "sample\(i)") ?? UIImage(systemName: "photo")!
-
             let attachment = NSTextAttachment()
             attachment.image = image
-
-            let maxWidth: CGFloat = 150
-            let ratio = image.size.height / image.size.width
-            attachment.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: maxWidth * ratio)
-
+            attachment.bounds = CGRect(x: 0, y: 0, width: 150, height: 150 * (image.size.height / image.size.width))
             attachments.append(attachment)
             attr.append(NSAttributedString(attachment: attachment))
             attr.append(NSAttributedString(string: "\n\n"))
         }
-
         textView.attributedText = attr
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
@@ -64,34 +56,138 @@ class ViewController: UIViewController, UITextViewDelegate {
 
         let layoutManager = textView.layoutManager
         let textContainer = textView.textContainer
+        let idx = layoutManager.characterIndex(for: loc, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
 
-        let characterIndex = layoutManager.characterIndex(for: loc, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
-
-        guard characterIndex < textView.attributedText.length,
-              let attachment = textView.attributedText.attribute(.attachment, at: characterIndex, effectiveRange: nil) as? NSTextAttachment,
-              let tappedIndex = attachments.firstIndex(of: attachment),
-              let image = attachment.image
+        guard idx < textView.attributedText.length,
+              let attachment = textView.attributedText.attribute(.attachment, at: idx, effectiveRange: nil) as? NSTextAttachment,
+              let image = attachment.image,
+              let tappedIndex = attachments.firstIndex(of: attachment)
         else { return }
 
-        // 🔹 タップされた画像の位置を特定して「ビヨン」開始
-        let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: characterIndex, length: 1), in: textContainer)
+        // 元画像のフレーム
+        let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: idx, length: 1), in: textContainer)
         var startFrame = frameInTextView
         startFrame.origin.x += textView.textContainerInset.left
         startFrame.origin.y += textView.textContainerInset.top
-        startFrame = textView.convert(startFrame, to: view)
+        let convertedFrame = textView.convert(startFrame, to: view)
 
-        // 🔹 拡大先VCの準備
-        let zoomVC = ImageGalleryViewController(images: attachments.compactMap { $0.image }, initialIndex: tappedIndex)
-        zoomVC.modalPresentationStyle = .custom
-        zoomVC.transitioningDelegate = transitionDelegate
+        // **attachments はそのままにしておく**
+        let zoomVC = FreeFloatImageViewController(images: attachments.map { $0.image! },
+                                                  initialIndex: tappedIndex,
+                                                  startFrame: convertedFrame)
+        zoomVC.modalPresentationStyle = .overFullScreen
+        present(zoomVC, animated: false)
+    }
+}
 
-        // 🔹 トランジション情報を設定
-        transitionDelegate.animator.originFrame = startFrame
-        let tempImageView = UIImageView(image: image)
-        tempImageView.contentMode = .scaleAspectFit
-        transitionDelegate.animator.imageView = tempImageView
+// MARK: - 拡大画像VC
+class FreeFloatImageViewController: UIViewController {
 
-        present(zoomVC, animated: true)
+    var images: [UIImage]
+    var currentIndex: Int
+    private var imageView = UIImageView()
+    private var startFrame: CGRect
+    private var panStartCenter: CGPoint = .zero
+
+    init(images: [UIImage], initialIndex: Int, startFrame: CGRect) {
+        self.images = images
+        self.currentIndex = initialIndex
+        self.startFrame = startFrame
+        super.init(nibName: nil, bundle: nil)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+
+        // UIImageView 設定
+        imageView.image = images[currentIndex]
+        imageView.contentMode = .scaleAspectFit
+        imageView.frame = startFrame
+        imageView.isUserInteractionEnabled = true
+        view.addSubview(imageView)
+
+        // スナップショット拡大
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.6) {
+            self.imageView.frame = self.view.bounds
+        }
+
+        // 下スワイプ＋自由移動
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        imageView.addGestureRecognizer(pan)
+
+        // 左右スワイプ（ページ切替）
+        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(nextImage))
+        swipeLeft.direction = .left
+        imageView.addGestureRecognizer(swipeLeft)
+
+        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(prevImage))
+        swipeRight.direction = .right
+        imageView.addGestureRecognizer(swipeRight)
+
+        // 閉じるボタン
+        let btn = UIButton(type: .system)
+        btn.setTitle("×", for: .normal)
+        btn.tintColor = .white
+        btn.titleLabel?.font = .systemFont(ofSize: 30)
+        btn.frame = CGRect(x: 20, y: 40, width: 50, height: 40)
+        btn.addTarget(self, action: #selector(close), for: .touchUpInside)
+        view.addSubview(btn)
+    }
+
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let translation = gesture.translation(in: view)
+        let velocity = gesture.velocity(in: view)
+
+        switch gesture.state {
+        case .began:
+            panStartCenter = imageView.center
+        case .changed:
+            imageView.center = CGPoint(x: panStartCenter.x + translation.x,
+                                       y: panStartCenter.y + translation.y)
+            view.backgroundColor = UIColor.black.withAlphaComponent(max(0.3, 1 - abs(translation.y)/400))
+        case .ended, .cancelled:
+            if translation.y > 150 || velocity.y > 500 {
+                UIView.animate(withDuration: 0.2, animations: {
+                    self.imageView.alpha = 0
+                    self.imageView.center.y += 1000
+                }, completion: { _ in
+                    self.dismiss(animated: false)
+                })
+            } else {
+                UIView.animate(withDuration: 0.25,
+                               delay: 0,
+                               usingSpringWithDamping: 0.8,
+                               initialSpringVelocity: 0.6,
+                               options: [], animations: {
+                    self.imageView.center = self.panStartCenter
+                    self.view.backgroundColor = .black
+                })
+            }
+        default: break
+        }
+    }
+
+    @objc private func nextImage() {
+        guard currentIndex < images.count - 1 else { return }
+        currentIndex += 1
+        imageView.image = images[currentIndex]
+    }
+
+    @objc private func prevImage() {
+        guard currentIndex > 0 else { return }
+        currentIndex -= 1
+        imageView.image = images[currentIndex]
+    }
+
+    @objc private func close() {
+        UIView.animate(withDuration: 0.2, animations: {
+            self.imageView.alpha = 0
+            self.imageView.center.y += 500
+        }, completion: { _ in
+            self.dismiss(animated: false)
+        })
     }
 }
 
@@ -102,13 +198,15 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
     var initialIndex: Int
     private var collectionView: UICollectionView!
 
-    // 下スワイプ用
+    // フリーフロート用
     private var panStartCenter: CGPoint = .zero
+    private var currentVelocity: CGPoint = .zero
 
     init(images: [UIImage], initialIndex: Int) {
         self.images = images
         self.initialIndex = initialIndex
         super.init(nibName: nil, bundle: nil)
+        modalPresentationStyle = .custom
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -131,15 +229,53 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(collectionView)
 
-        collectionView.layoutIfNeeded()
         collectionView.scrollToItem(at: IndexPath(item: initialIndex, section: 0),
                                     at: .centeredHorizontally, animated: false)
 
         addCloseButton()
 
-        // 下スワイプジェスチャー
+        // 下スワイプ＋フリーフロート
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         view.addGestureRecognizer(pan)
+    }
+
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let translation = gesture.translation(in: view)
+        let velocity = gesture.velocity(in: view)
+
+        switch gesture.state {
+        case .began:
+            panStartCenter = view.center
+        case .changed:
+            // 上下左右自由に動かす
+            view.center = CGPoint(x: panStartCenter.x + translation.x,
+                                  y: panStartCenter.y + translation.y)
+            
+            // 背景フェード（縦移動だけ連動）
+            let alpha = max(0.3, 1 - abs(translation.y) / 400)
+            view.backgroundColor = UIColor.black.withAlphaComponent(alpha)
+        case .ended, .cancelled:
+            // 閾値または下向き速度で閉じる
+            if translation.y > 150 || velocity.y > 500 {
+                let finalY = view.frame.origin.y + view.frame.height + 200
+                UIView.animate(withDuration: 0.25, animations: {
+                    self.view.center.y = finalY
+                    self.view.alpha = 0
+                }, completion: { _ in
+                    self.dismiss(animated: false)
+                })
+            } else {
+                // 元に戻す
+                UIView.animate(withDuration: 0.25, delay: 0,
+                               usingSpringWithDamping: 0.8,
+                               initialSpringVelocity: 0.6,
+                               options: [.curveEaseOut], animations: {
+                    self.view.center = self.panStartCenter
+                    self.view.backgroundColor = .black
+                })
+            }
+        default: break
+        }
     }
 
     private func addCloseButton() {
@@ -156,7 +292,6 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
         dismiss(animated: true)
     }
 
-    // MARK: - UICollectionView
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         images.count
     }
@@ -166,34 +301,6 @@ class ImageGalleryViewController: UIViewController, UICollectionViewDataSource, 
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! ImageZoomCell
         cell.configure(with: images[indexPath.item])
         return cell
-    }
-
-    // MARK: - 下スワイプ処理
-    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-        let translation = gesture.translation(in: view)
-
-        switch gesture.state {
-        case .began:
-            panStartCenter = view.center
-        case .changed:
-            if translation.y > 0 {
-                view.center = CGPoint(x: panStartCenter.x, y: panStartCenter.y + translation.y)
-                
-                // 背景フェード
-                let alpha = max(0.3, 1 - (translation.y / 500))
-                view.backgroundColor = UIColor.black.withAlphaComponent(alpha)
-            }
-        case .ended, .cancelled:
-            if translation.y > 150 {
-                dismiss(animated: true)
-            } else {
-                UIView.animate(withDuration: 0.2) {
-                    self.view.center = self.panStartCenter
-                    self.view.backgroundColor = .black
-                }
-            }
-        default: break
-        }
     }
 }
 
@@ -255,7 +362,7 @@ class ZoomTransitionDelegate: NSObject, UIViewControllerTransitioningDelegate {
 
 class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     var isPresenting = true
-    var originFrame = CGRect.zero
+    var originFrame: CGRect = .zero
     var imageView: UIImageView?
 
     func transitionDuration(using ctx: UIViewControllerContextTransitioning?) -> TimeInterval {
@@ -263,36 +370,34 @@ class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     }
 
     func animateTransition(using ctx: UIViewControllerContextTransitioning) {
-        guard let toVC = ctx.viewController(forKey: .to),
-              let fromVC = ctx.viewController(forKey: .from),
+        guard let fromVC = ctx.viewController(forKey: .from),
+              let toVC = ctx.viewController(forKey: .to),
               let imageView = imageView else { return }
-
+        
         let container = ctx.containerView
-
+        let snapshot = UIImageView(image: imageView.image)
+        snapshot.contentMode = .scaleAspectFit
+        snapshot.frame = isPresenting ? originFrame : toVC.view.frame
+        container.addSubview(snapshot)
+        
         if isPresenting {
-            let snapshot = UIImageView(image: imageView.image)
-            snapshot.contentMode = .scaleAspectFit
-            snapshot.frame = originFrame
-            container.addSubview(snapshot)
             toVC.view.alpha = 0
             container.addSubview(toVC.view)
+        }
 
-            UIView.animate(withDuration: 0.35,
-                           delay: 0,
-                           usingSpringWithDamping: 0.9,
-                           initialSpringVelocity: 0.6) {
-                snapshot.frame = container.bounds
+        UIView.animate(withDuration: transitionDuration(using: ctx),
+                       delay: 0,
+                       usingSpringWithDamping: 0.9,
+                       initialSpringVelocity: 0.6) {
+            snapshot.frame = self.isPresenting ? container.bounds : self.originFrame
+            if self.isPresenting {
                 toVC.view.alpha = 1
-            } completion: { _ in
-                snapshot.removeFromSuperview()
-                ctx.completeTransition(true)
-            }
-        } else {
-            UIView.animate(withDuration: 0.3) {
+            } else {
                 fromVC.view.alpha = 0
-            } completion: { _ in
-                ctx.completeTransition(true)
             }
+        } completion: { _ in
+            snapshot.removeFromSuperview()
+            ctx.completeTransition(true)
         }
     }
 }
@@ -301,7 +406,7 @@ class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 class ZoomPresentationController: UIPresentationController {
     private var dimmingView: UIView!
     private var panGesture: UIPanGestureRecognizer!
-    private var presentedViewInitialFrame: CGRect = .zero
+    private var initialFrame: CGRect = .zero
 
     override init(presentedViewController: UIViewController, presenting presentingViewController: UIViewController?) {
         super.init(presentedViewController: presentedViewController, presenting: presentingViewController)
@@ -310,7 +415,7 @@ class ZoomPresentationController: UIPresentationController {
 
     private func setup() {
         dimmingView = UIView()
-        dimmingView.backgroundColor = UIColor.black.withAlphaComponent(1.0)
+        dimmingView.backgroundColor = .black
         dimmingView.alpha = 0
 
         panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
@@ -318,12 +423,12 @@ class ZoomPresentationController: UIPresentationController {
     }
 
     override func presentationTransitionWillBegin() {
-        guard let containerView = containerView else { return }
-        dimmingView.frame = containerView.bounds
-        containerView.insertSubview(dimmingView, at: 0)
+        guard let container = containerView else { return }
+        dimmingView.frame = container.bounds
+        container.insertSubview(dimmingView, at: 0)
 
         presentedViewController.transitionCoordinator?.animate(alongsideTransition: { _ in
-            self.dimmingView.alpha = 1.0
+            self.dimmingView.alpha = 1
         })
     }
 
@@ -333,37 +438,34 @@ class ZoomPresentationController: UIPresentationController {
         })
     }
 
-    override func containerViewWillLayoutSubviews() {
-        super.containerViewWillLayoutSubviews()
-        presentedView?.frame = containerView?.bounds ?? .zero
-    }
-
-    // MARK: - 下スワイプで自由に閉じる
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard let view = presentedView else { return }
         let translation = gesture.translation(in: containerView)
 
         switch gesture.state {
         case .began:
-            presentedViewInitialFrame = view.frame
+            initialFrame = view.frame
         case .changed:
             if translation.y > 0 {
                 view.frame.origin.y = translation.y
-                let alpha = max(0, 1 - translation.y / 400)
-                dimmingView.alpha = alpha
+                dimmingView.alpha = max(0, 1 - translation.y / 400)
             }
         case .ended, .cancelled:
             if translation.y > 200 {
                 presentedViewController.dismiss(animated: true)
             } else {
                 UIView.animate(withDuration: 0.25) {
-                    view.frame = self.presentedViewInitialFrame
-                    self.dimmingView.alpha = 1.0
+                    view.frame = self.initialFrame
+                    self.dimmingView.alpha = 1
                 }
             }
         default:
             break
         }
+    }
+
+    override func containerViewWillLayoutSubviews() {
+        presentedView?.frame = containerView?.bounds ?? .zero
     }
 }
 
