@@ -185,21 +185,29 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
                                   y: panStartCenter.y + translation.y)
             // 親ビューに通知して alpha を変更
             onPanChanged?(translation.y)
+
+            // 画像自体もフェード
+            let progress = min(1, abs(translation.y) / 400)
+            collectionView.alpha = 1 - progress
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
             isDraggingToDismiss = false
+            let progress = min(1, abs(translation.y) / 400)
+
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
+                    self.collectionView.alpha = 0
                 }, completion: { _ in
                     self.dismiss(animated: false) {
-                        self.onDismiss?() // 親ビューフェードを元に戻す
+                        self.onDismiss?()
                     }
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.onPanChanged?(0) // 元に戻す
+                    self.collectionView.alpha = 1
+                    self.onPanChanged?(0)
                 }
             }
         default: break
