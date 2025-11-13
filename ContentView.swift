@@ -12,97 +12,87 @@ import UIKit
 
 // MARK: - ViewController (UITextView)
 class ViewController: UIViewController, UITextViewDelegate {
-    
+
     let textView = UITextView()
     var attachments: [NSTextAttachment] = []
-    
+    let transitionDelegate = ZoomTransitionDelegate()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        
+
         textView.isEditable = false
         textView.isScrollEnabled = true
         textView.delegate = self
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.backgroundColor = .systemGray6
         view.addSubview(textView)
-        
+
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             textView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
         ])
-        
+
         let attr = NSMutableAttributedString(string: "Tap images below:\n\n")
         for i in 1...3 {
             let image = UIImage(named: "sample\(i)") ?? UIImage(systemName: "photo")!
-            
+
             let attachment = NSTextAttachment()
             attachment.image = image
-            
+
             let maxWidth: CGFloat = 150
-            let maxHeight: CGFloat = 200
             let ratio = image.size.height / image.size.width
-            let height = min(maxWidth * ratio, maxHeight)
-            attachment.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: height)
-            
+            attachment.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: maxWidth * ratio)
+
             attachments.append(attachment)
             attr.append(NSAttributedString(attachment: attachment))
             attr.append(NSAttributedString(string: "\n\n"))
         }
-        
+
         textView.attributedText = attr
-        
+
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         textView.addGestureRecognizer(tap)
     }
-    
+
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         let location = gesture.location(in: textView)
         var loc = location
         loc.x -= textView.textContainerInset.left
         loc.y -= textView.textContainerInset.top
-        
+
         let layoutManager = textView.layoutManager
         let textContainer = textView.textContainer
-        
-        let characterIndex = layoutManager.characterIndex(for: loc,
-                                                          in: textContainer,
-                                                          fractionOfDistanceBetweenInsertionPoints: nil)
-        
+
+        let characterIndex = layoutManager.characterIndex(for: loc, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
+
         guard characterIndex < textView.attributedText.length,
               let attachment = textView.attributedText.attribute(.attachment, at: characterIndex, effectiveRange: nil) as? NSTextAttachment,
               let tappedIndex = attachments.firstIndex(of: attachment),
               let image = attachment.image
         else { return }
-        
-        // 🔹 拡大開始位置（textView内の画像位置）
-        let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: characterIndex, length: 1),
-                                                         in: textContainer)
+
+        // 🔹 タップされた画像の位置を特定して「ビヨン」開始
+        let frameInTextView = layoutManager.boundingRect(forGlyphRange: NSRange(location: characterIndex, length: 1), in: textContainer)
         var startFrame = frameInTextView
         startFrame.origin.x += textView.textContainerInset.left
         startFrame.origin.y += textView.textContainerInset.top
         startFrame = textView.convert(startFrame, to: view)
-        
-        // 🔹 拡大先VC
-        let zoomVC = ImageGalleryViewController(images: attachments.compactMap { $0.image },
-                                                initialIndex: tappedIndex)
-        
-        // ✅ カスタムトランジション設定
-        let transitionDelegate = ZoomTransitionDelegate()
-        transitionDelegate.animator.originFrame = startFrame
-        
-        let imageView = UIImageView(image: image)
-        imageView.contentMode = .scaleAspectFit
-        transitionDelegate.animator.imageView = imageView
-        
-        zoomVC.transitioningDelegate = transitionDelegate
+
+        // 🔹 拡大先VCの準備
+        let zoomVC = ImageGalleryViewController(images: attachments.compactMap { $0.image }, initialIndex: tappedIndex)
         zoomVC.modalPresentationStyle = .custom
-        
+        zoomVC.transitioningDelegate = transitionDelegate
+
+        // 🔹 トランジション情報を設定
+        transitionDelegate.animator.originFrame = startFrame
+        let tempImageView = UIImageView(image: image)
+        tempImageView.contentMode = .scaleAspectFit
+        transitionDelegate.animator.imageView = tempImageView
+
         present(zoomVC, animated: true)
     }
-    
 }
 
 // MARK: - Image Gallery with Swipe-to-Dismiss
