@@ -81,8 +81,9 @@ class ViewController: UIViewController, UITextViewDelegate {
 
         // 下スワイプで親ビューのフェードを動かすクロージャ
         gallery.onPanChanged = { translationY in
-            let alpha = min(0.5, 0.5 * abs(translationY) / 400)
-            fadeView.alpha = alpha
+            // translationY が 0 〜 任意の値で alpha を反転
+            let progress = min(1, abs(translationY) / 400)
+            fadeView.alpha = 0.5 * (1 - progress) // ← ここで逆転
         }
 
         gallery.onDismiss = {
