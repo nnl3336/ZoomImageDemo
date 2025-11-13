@@ -9,7 +9,10 @@ import SwiftUI
 import CoreData
 import UIKit
 
-import UIKit
+import CoreImage
+import CoreImage.CIFilterBuiltins  // これを入れると型安全に使えます
+
+import Photos
 
 // MARK: - メインViewController
 class ViewController: UIViewController, UITextViewDelegate {
@@ -207,6 +210,8 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
 class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
+    
+    private let editButton = UIButton(type: .system)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -221,9 +226,53 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
         imageView.frame = scrollView.bounds
         imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         scrollView.addSubview(imageView)
+        
+        editButton.setTitle("Edit & Save", for: .normal)
+            editButton.tintColor = .white
+            editButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+            editButton.layer.cornerRadius = 8
+            editButton.frame = CGRect(x: contentView.bounds.width - 120, y: contentView.bounds.height - 60, width: 100, height: 40)
+            editButton.autoresizingMask = [.flexibleLeftMargin, .flexibleTopMargin]
+            editButton.addTarget(self, action: #selector(editAndSave), for: .touchUpInside)
+            contentView.addSubview(editButton)
     }
 
     required init?(coder: NSCoder) { fatalError() }
+    
+    //
+    
+    @objc private func editAndSave() {
+        guard let image = imageView.image else { return }
+        let edited = applySomeFilter(to: image)
+        saveToPhotoLibrary(edited)
+    }
+    func applySomeFilter(to image: UIImage) -> UIImage {
+        let context = CIContext()
+        let ciImage = CIImage(image: image)!
+        
+        // 型安全版フィルター
+        let filter = CIFilter.sepiaTone()
+        filter.inputImage = ciImage
+        filter.intensity = 0.8
+        
+        guard let output = filter.outputImage,
+              let cgImage = context.createCGImage(output, from: output.extent) else {
+            return image
+        }
+        return UIImage(cgImage: cgImage)
+    }
+
+    func saveToPhotoLibrary(_ image: UIImage) {
+        PHPhotoLibrary.requestAuthorization { status in
+            if status == .authorized {
+                UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+            }
+        }
+    }
+
+
+    
+    //
 
     func configure(with image: UIImage) {
         imageView.image = image
