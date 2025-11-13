@@ -46,7 +46,7 @@ class ViewController: UIViewController, UITextViewDelegate {
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         textView.addGestureRecognizer(tap)
-    }
+    } 
 
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         let location = gesture.location(in: textView)
