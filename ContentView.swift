@@ -68,11 +68,34 @@ class ViewController: UIViewController, UITextViewDelegate {
               let tappedIndex = attachments.firstIndex(of: attachment),
               let image = attachment.image else { return }
 
-        // 🔹 Apple ライクに拡大
+        guard let window = view.window else { return }
+
+        // 親ビュー全体を暗くするビュー
+        let fadeView = UIView(frame: window.bounds)
+        fadeView.backgroundColor = .black
+        fadeView.alpha = 0
+        window.addSubview(fadeView)
+
+        // フェードイン
+        UIView.animate(withDuration: 0.25) {
+            fadeView.alpha = 0.5  // 好きな暗さに調整
+        }
+
         let gallery = GalleryViewController(images: attachments.compactMap { $0.image }, initialIndex: tappedIndex)
         gallery.modalPresentationStyle = .overFullScreen
+
+        // Gallery が閉じられたときにフェードを戻す
+        gallery.onDismiss = {
+            UIView.animate(withDuration: 0.25, animations: {
+                fadeView.alpha = 0
+            }, completion: { _ in
+                fadeView.removeFromSuperview()
+            })
+        }
+
         present(gallery, animated: false)
     }
+
 }
 extension ViewController: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -102,6 +125,8 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     private let dimmingView = UIView()
     private var panStartCenter: CGPoint = .zero
     private var isDraggingToDismiss = false
+    
+    var onDismiss: (() -> Void)?  // ←追加
 
     init(images: [UIImage], initialIndex: Int) {
         self.images = images
@@ -156,28 +181,28 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .changed:
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            // 🔹 背景は常に黒なので alpha は変更しない
-            // dimmingView.alpha = 1  // この行は不要なので削除またはコメントアウト
+            // 縦移動量に応じて背景フェード
+            let alpha = max(0.2, 1 - abs(translation.y) / 400)
+            dimmingView.alpha = alpha
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
             isDraggingToDismiss = false
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
-                    self.dimmingView.alpha = 1 // 背景は黒のまま
+                    self.dimmingView.alpha = 0
                 }, completion: { _ in
                     self.dismiss(animated: false)
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.dimmingView.alpha = 1 // 背景は黒のまま
+                    self.dimmingView.alpha = 1
                 }
             }
         default: break
         }
     }
-
 
     private func addCloseButton() {
         let btn = UIButton(type: .system)
