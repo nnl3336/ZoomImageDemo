@@ -71,16 +71,16 @@ class ViewController: UIViewController, UITextViewDelegate {
     }
 }
 
-
 // MARK: - ギャラリー
 // MARK: - GalleryViewController
-class GalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
+class GalleryViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
 
     var images: [UIImage]
     var initialIndex: Int
     private var collectionView: UICollectionView!
 
-    // フリーフロート用
+    // 下スワイプ用
+    private let dimmingView = UIView()
     private var panStartCenter: CGPoint = .zero
     private var isDraggingToDismiss = false
 
@@ -90,26 +90,32 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .overFullScreen
     }
+
     required init?(coder: NSCoder) { fatalError() }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .black
+        view.backgroundColor = .clear
 
-        // UICollectionView セットアップ
+        // 背景ビュー
+        dimmingView.frame = view.bounds
+        dimmingView.backgroundColor = .black
+        dimmingView.alpha = 1
+        view.addSubview(dimmingView)
+
+        // UICollectionView
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 0
         layout.itemSize = view.bounds.size
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
-        collectionView.backgroundColor = .black
+        collectionView.backgroundColor = .clear
         collectionView.isPagingEnabled = true
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.dataSource = self
         collectionView.delegate = self
         collectionView.register(ImageZoomCell.self, forCellWithReuseIdentifier: "cell")
-        collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(collectionView)
 
         collectionView.scrollToItem(at: IndexPath(item: initialIndex, section: 0),
@@ -117,7 +123,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
 
         addCloseButton()
 
-        // 下スワイプ＋フリーフロート
+        // 下スワイプ用
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         view.addGestureRecognizer(pan)
     }
@@ -130,26 +136,27 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .began:
             panStartCenter = view.center
             isDraggingToDismiss = true
-            collectionView.isScrollEnabled = false
+            collectionView.isScrollEnabled = false // 横スクロール無効化
         case .changed:
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            view.backgroundColor = UIColor.black.withAlphaComponent(max(0.3, 1 - abs(translation.y) / 400))
+            // 縦移動量に応じて背景フェード
+            let alpha = max(0.2, 1 - abs(translation.y) / 400)
+            dimmingView.alpha = alpha
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
             isDraggingToDismiss = false
-
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
-                    self.view.alpha = 0
+                    self.dimmingView.alpha = 0
                 }, completion: { _ in
                     self.dismiss(animated: false)
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.view.backgroundColor = .black
+                    self.dimmingView.alpha = 1
                 }
             }
         default: break
@@ -170,7 +177,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         dismiss(animated: true)
     }
 
-    // MARK: - UICollectionViewDataSource
+    // MARK: UICollectionViewDataSource
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         images.count
     }
@@ -180,14 +187,6 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! ImageZoomCell
         cell.configure(with: images[indexPath.item])
         return cell
-    }
-
-    // MARK: - UICollectionViewDelegateFlowLayout
-    func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool { true }
-
-    func scrollViewShouldScroll(_ scrollView: UIScrollView) -> Bool {
-        // 縦ドラッグ中は横スクロール禁止
-        return !isDraggingToDismiss
     }
 }
 
