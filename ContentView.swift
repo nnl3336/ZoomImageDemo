@@ -66,25 +66,25 @@ class ViewController: UIViewController, UITextViewDelegate {
         guard index < textView.attributedText.length,
               let attachment = textView.attributedText.attribute(.attachment, at: index, effectiveRange: nil) as? NSTextAttachment,
               let tappedIndex = attachments.firstIndex(of: attachment),
-              let image = attachment.image else { return }
+              let _ = attachment.image else { return }
 
         guard let window = view.window else { return }
 
-        // 親ビュー全体を暗くするビュー
+        // 親ビュー全体のフェードビュー
         let fadeView = UIView(frame: window.bounds)
         fadeView.backgroundColor = .black
         fadeView.alpha = 0
         window.addSubview(fadeView)
 
-        // フェードイン
-        UIView.animate(withDuration: 0.25) {
-            fadeView.alpha = 0.5  // 好きな暗さに調整
-        }
-
         let gallery = GalleryViewController(images: attachments.compactMap { $0.image }, initialIndex: tappedIndex)
         gallery.modalPresentationStyle = .overFullScreen
 
-        // Gallery が閉じられたときにフェードを戻す
+        // 下スワイプで親ビューのフェードを動かすクロージャ
+        gallery.onPanChanged = { translationY in
+            let alpha = min(0.5, 0.5 * abs(translationY) / 400)
+            fadeView.alpha = alpha
+        }
+
         gallery.onDismiss = {
             UIView.animate(withDuration: 0.25, animations: {
                 fadeView.alpha = 0
@@ -120,13 +120,14 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     var images: [UIImage]
     var initialIndex: Int
     private var collectionView: UICollectionView!
+    
+    var onDismiss: (() -> Void)?
+    var onPanChanged: ((CGFloat) -> Void)? // translationY を渡すクロージャ
 
     // 下スワイプ用
     private let dimmingView = UIView()
     private var panStartCenter: CGPoint = .zero
     private var isDraggingToDismiss = false
-    
-    var onDismiss: (() -> Void)?  // ←追加
 
     init(images: [UIImage], initialIndex: Int) {
         self.images = images
@@ -177,27 +178,27 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .began:
             panStartCenter = view.center
             isDraggingToDismiss = true
-            collectionView.isScrollEnabled = false // 横スクロール無効化
+            collectionView.isScrollEnabled = false
         case .changed:
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            // 縦移動量に応じて背景フェード
-            let alpha = max(0.2, 1 - abs(translation.y) / 400)
-            dimmingView.alpha = alpha
+            // 親ビューに通知して alpha を変更
+            onPanChanged?(translation.y)
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
             isDraggingToDismiss = false
             if translation.y > 150 || velocity.y > 500 {
                 UIView.animate(withDuration: 0.25, animations: {
                     self.view.center.y += self.view.frame.height
-                    self.dimmingView.alpha = 0
                 }, completion: { _ in
-                    self.dismiss(animated: false)
+                    self.dismiss(animated: false) {
+                        self.onDismiss?() // 親ビューフェードを元に戻す
+                    }
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.dimmingView.alpha = 1
+                    self.onPanChanged?(0) // 元に戻す
                 }
             }
         default: break
