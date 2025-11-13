@@ -244,6 +244,13 @@ class ZoomTransitionDelegate: NSObject, UIViewControllerTransitioningDelegate {
         animator.isPresenting = false
         return animator
     }
+
+    func presentationController(forPresented presented: UIViewController,
+                                presenting: UIViewController?,
+                                source: UIViewController)
+    -> UIPresentationController? {
+        return ZoomPresentationController(presentedViewController: presented, presenting: presenting)
+    }
 }
 
 class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
@@ -289,6 +296,77 @@ class ZoomAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         }
     }
 }
+
+// MARK: - Presentation Controller
+class ZoomPresentationController: UIPresentationController {
+    private var dimmingView: UIView!
+    private var panGesture: UIPanGestureRecognizer!
+    private var presentedViewInitialFrame: CGRect = .zero
+
+    override init(presentedViewController: UIViewController, presenting presentingViewController: UIViewController?) {
+        super.init(presentedViewController: presentedViewController, presenting: presentingViewController)
+        setup()
+    }
+
+    private func setup() {
+        dimmingView = UIView()
+        dimmingView.backgroundColor = UIColor.black.withAlphaComponent(1.0)
+        dimmingView.alpha = 0
+
+        panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        presentedViewController.view.addGestureRecognizer(panGesture)
+    }
+
+    override func presentationTransitionWillBegin() {
+        guard let containerView = containerView else { return }
+        dimmingView.frame = containerView.bounds
+        containerView.insertSubview(dimmingView, at: 0)
+
+        presentedViewController.transitionCoordinator?.animate(alongsideTransition: { _ in
+            self.dimmingView.alpha = 1.0
+        })
+    }
+
+    override func dismissalTransitionWillBegin() {
+        presentedViewController.transitionCoordinator?.animate(alongsideTransition: { _ in
+            self.dimmingView.alpha = 0
+        })
+    }
+
+    override func containerViewWillLayoutSubviews() {
+        super.containerViewWillLayoutSubviews()
+        presentedView?.frame = containerView?.bounds ?? .zero
+    }
+
+    // MARK: - 下スワイプで自由に閉じる
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        guard let view = presentedView else { return }
+        let translation = gesture.translation(in: containerView)
+
+        switch gesture.state {
+        case .began:
+            presentedViewInitialFrame = view.frame
+        case .changed:
+            if translation.y > 0 {
+                view.frame.origin.y = translation.y
+                let alpha = max(0, 1 - translation.y / 400)
+                dimmingView.alpha = alpha
+            }
+        case .ended, .cancelled:
+            if translation.y > 200 {
+                presentedViewController.dismiss(animated: true)
+            } else {
+                UIView.animate(withDuration: 0.25) {
+                    view.frame = self.presentedViewInitialFrame
+                    self.dimmingView.alpha = 1.0
+                }
+            }
+        default:
+            break
+        }
+    }
+}
+
 
 
 // MARK: - SwiftUI Wrapper
