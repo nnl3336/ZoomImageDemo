@@ -95,12 +95,12 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .clear // ←透明
+        view.backgroundColor = .clear
 
-        // dimmingView を拡大ビューの背後に追加
+        // dimmingView は初期 alpha = 1（真っ黒）
         dimmingView.frame = view.bounds
         dimmingView.backgroundColor = .black
-        dimmingView.alpha = 0
+        dimmingView.alpha = 1
         view.addSubview(dimmingView)
 
         // UICollectionView
@@ -110,7 +110,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         layout.itemSize = view.bounds.size
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
-        collectionView.backgroundColor = .clear // ←透明
+        collectionView.backgroundColor = .clear
         collectionView.isPagingEnabled = true
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.dataSource = self
@@ -123,11 +123,6 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         // 下スワイプ用
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         view.addGestureRecognizer(pan)
-
-        // 表示時フェードイン
-        UIView.animate(withDuration: 0.25) {
-            self.dimmingView.alpha = 0.6
-        }
     }
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
