@@ -95,15 +95,13 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .clear
+        view.backgroundColor = .clear // ←透明
 
-        // 背景フェードビューを最背面に
-        if let parentView = presentingViewController?.view {
-            dimmingView.frame = parentView.bounds
-            dimmingView.backgroundColor = .black
-            dimmingView.alpha = 0
-            parentView.addSubview(dimmingView)
-        }
+        // dimmingView を拡大ビューの背後に追加
+        dimmingView.frame = view.bounds
+        dimmingView.backgroundColor = .black
+        dimmingView.alpha = 0
+        view.addSubview(dimmingView)
 
         // UICollectionView
         let layout = UICollectionViewFlowLayout()
@@ -112,16 +110,13 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         layout.itemSize = view.bounds.size
 
         collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
-        collectionView.backgroundColor = .clear
+        collectionView.backgroundColor = .clear // ←透明
         collectionView.isPagingEnabled = true
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.dataSource = self
         collectionView.delegate = self
         collectionView.register(ImageZoomCell.self, forCellWithReuseIdentifier: "cell")
         view.addSubview(collectionView)
-
-        collectionView.scrollToItem(at: IndexPath(item: initialIndex, section: 0),
-                                    at: .centeredHorizontally, animated: false)
 
         addCloseButton()
 
@@ -143,12 +138,12 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .began:
             panStartCenter = view.center
             isDraggingToDismiss = true
-            collectionView.isScrollEnabled = false
+            collectionView.isScrollEnabled = false // 横スクロール無効化
         case .changed:
             view.center = CGPoint(x: panStartCenter.x + translation.x,
                                   y: panStartCenter.y + translation.y)
-            // 背景フェードは縦移動量に応じて
-            let alpha = max(0, 0.6 * (1 - abs(translation.y) / 300))
+            // 縦移動量に応じて背景フェード
+            let alpha = max(0.2, 1 - abs(translation.y) / 400)
             dimmingView.alpha = alpha
         case .ended, .cancelled:
             collectionView.isScrollEnabled = true
@@ -158,19 +153,17 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
                     self.view.center.y += self.view.frame.height
                     self.dimmingView.alpha = 0
                 }, completion: { _ in
-                    self.dimmingView.removeFromSuperview()
                     self.dismiss(animated: false)
                 })
             } else {
                 UIView.animate(withDuration: 0.25) {
                     self.view.center = self.panStartCenter
-                    self.dimmingView.alpha = 0.6
+                    self.dimmingView.alpha = 1
                 }
             }
         default: break
         }
     }
-
 
     private func addCloseButton() {
         let btn = UIButton(type: .system)
