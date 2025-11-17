@@ -254,63 +254,10 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     private let deleteButton = UIButton(type: .system)
     private let filterButton = UIButton(type: .system)
     private let rotateButton = UIButton(type: .system)
+    
+    private let navBar = UINavigationBar()
+    private let toolBar = UIToolbar()
 
-    // MARK: - setupBars内で初期化
-    private func setupBars() {
-        // ナビバー
-        navBarView.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 80)
-        navBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
-        view.addSubview(navBarView)
-
-        // ボタン初期設定
-        closeButton.setTitle("×", for: .normal)
-        closeButton.frame = CGRect(x: 10, y: 30, width: 50, height: 40)
-        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        navBarView.addSubview(closeButton)
-
-        saveButton.setTitle("保存", for: .normal)
-        saveButton.frame = CGRect(x: navBarView.bounds.width - 80, y: 30, width: 70, height: 40)
-        saveButton.autoresizingMask = [.flexibleLeftMargin]
-        saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
-        navBarView.addSubview(saveButton)
-
-        cancelButton.setTitle("キャンセル", for: .normal)
-        cancelButton.frame = CGRect(x: 10, y: 30, width: 80, height: 40)
-        cancelButton.addTarget(self, action: #selector(cancelEditing), for: .touchUpInside)
-        navBarView.addSubview(cancelButton)
-
-        // ツールバー
-        toolBarView.frame = CGRect(x: 0, y: view.bounds.height - 80, width: view.bounds.width, height: 80)
-        toolBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
-        view.addSubview(toolBarView)
-
-        editButton.setTitle("編集", for: .normal)
-        editButton.frame = CGRect(x: 20, y: 20, width: 80, height: 40)
-        editButton.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
-        toolBarView.addSubview(editButton)
-
-        deleteButton.setTitle("削除", for: .normal)
-        deleteButton.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20, width: 80, height: 40)
-        deleteButton.autoresizingMask = [.flexibleLeftMargin]
-        deleteButton.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
-        toolBarView.addSubview(deleteButton)
-
-        filterButton.setTitle("フィルター", for: .normal)
-        filterButton.frame = CGRect(x: 20, y: 20, width: 100, height: 40)
-        filterButton.addTarget(self, action: #selector(applyFilter), for: .touchUpInside)
-        toolBarView.addSubview(filterButton)
-
-        rotateButton.setTitle("回転", for: .normal)
-        rotateButton.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20, width: 80, height: 40)
-        rotateButton.autoresizingMask = [.flexibleLeftMargin]
-        rotateButton.addTarget(self, action: #selector(rotateImage), for: .touchUpInside)
-        toolBarView.addSubview(rotateButton)
-
-        // 最初は編集用ボタンを非表示
-        cancelButton.isHidden = true
-        filterButton.isHidden = true
-        rotateButton.isHidden = true
-    }
     @objc private func applyFilter() {
         print("フィルター適用")
     }
@@ -321,40 +268,17 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     private func updateUIState() {
         switch uiState {
         case .normal:
-            navBarView.alpha = 1
-            toolBarView.alpha = 1
-
-            // ナビバー
-            closeButton.isHidden = false
-            saveButton.isHidden = false
-            cancelButton.isHidden = true
-
-            // ツールバー
-            editButton.isHidden = false
-            deleteButton.isHidden = false
-            filterButton.isHidden = true
-            rotateButton.isHidden = true
-
+            navBar.topItem?.leftBarButtonItems = [closeButton]
+            navBar.topItem?.rightBarButtonItems = [saveButton]
+            toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: true)
         case .editing:
-            navBarView.alpha = 1
-            toolBarView.alpha = 1
-
-            // ナビバー
-            closeButton.isHidden = true
-            saveButton.isHidden = false
-            cancelButton.isHidden = false
-
-            // ツールバー
-            editButton.isHidden = true
-            deleteButton.isHidden = true
-            filterButton.isHidden = false
-            rotateButton.isHidden = false
-
+            navBar.topItem?.leftBarButtonItems = [cancelButton]
+            navBar.topItem?.rightBarButtonItems = [saveButton]
+            toolBar.setItems([filterButton, UIBarButtonItem.flexibleSpace(), rotateButton], animated: true)
         case .hidden:
-            navBarView.alpha = 0
-            toolBarView.alpha = 0
-        case .saving:
-            break
+            navBar.alpha = 0
+            toolBar.alpha = 0
+        case .saving: break
         }
     }
 
