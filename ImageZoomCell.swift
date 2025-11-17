@@ -73,14 +73,14 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
         imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         scrollView.addSubview(imageView)
         
-        editButton.setTitle("Edit & Save", for: .normal)
+        /*editButton.setTitle("Edit & Save", for: .normal)
             editButton.tintColor = .white
             editButton.backgroundColor = UIColor.black.withAlphaComponent(0.5)
             editButton.layer.cornerRadius = 8
             editButton.frame = CGRect(x: contentView.bounds.width - 120, y: contentView.bounds.height - 60, width: 100, height: 40)
             editButton.autoresizingMask = [.flexibleLeftMargin, .flexibleTopMargin]
             editButton.addTarget(self, action: #selector(editAndSave), for: .touchUpInside)
-            contentView.addSubview(editButton)
+            contentView.addSubview(editButton)*/
     }
 
     required init?(coder: NSCoder) { fatalError() }
