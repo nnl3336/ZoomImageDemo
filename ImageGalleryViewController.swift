@@ -52,28 +52,6 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
 //    private let saveButton = UIButton(type: .system)
 //    private let cancelButton = UIButton(type: .system)
 
-    private func setupEditingPanel() {
-        editingPanel.frame = CGRect(x: 0, y: view.bounds.height - 100, width: view.bounds.width, height: 100)
-        editingPanel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        editingPanel.isHidden = true
-        view.addSubview(editingPanel)
-
-        // 保存ボタン
-        saveButton.setTitle("保存", for: .normal)
-        saveButton.tintColor = .white
-        saveButton.frame = CGRect(x: 20, y: 30, width: 100, height: 40)
-        saveButton.addTarget(self, action: #selector(saveEditedImage), for: .touchUpInside)
-        editingPanel.addSubview(saveButton)
-
-        // キャンセルボタン
-        cancelButton.setTitle("キャンセル", for: .normal)
-        cancelButton.tintColor = .white
-        cancelButton.frame = CGRect(x: editingPanel.bounds.width - 120, y: 30, width: 100, height: 40)
-        cancelButton.autoresizingMask = [.flexibleLeftMargin]
-        cancelButton.addTarget(self, action: #selector(cancelEditing), for: .touchUpInside)
-        editingPanel.addSubview(cancelButton)
-    }
-
     // 保存
     @objc private func saveEditedImage() {
         print("保存処理")
@@ -246,17 +224,76 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     
     //updateState
     
-    // MARK: - プロパティで保持
-    private let closeButton = UIButton(type: .system)
-    private let saveButton = UIButton(type: .system)
-    private let cancelButton = UIButton(type: .system)
-    private let editButton = UIButton(type: .system)
-    private let deleteButton = UIButton(type: .system)
-    private let filterButton = UIButton(type: .system)
-    private let rotateButton = UIButton(type: .system)
-    
+    // MARK: - ナビゲーションバーとツールバーのプロパティ
     private let navBar = UINavigationBar()
     private let toolBar = UIToolbar()
+
+    // ナビバーのボタン
+    private var closeButton: UIBarButtonItem!
+    private var saveButton: UIBarButtonItem!
+    private var cancelButton: UIBarButtonItem!
+
+    // ツールバーのボタン
+    private var editButton: UIBarButtonItem!
+    private var deleteButton: UIBarButtonItem!
+    private var filterButton: UIBarButtonItem!
+    private var rotateButton: UIBarButtonItem!
+    
+    private func setupBars() {
+        // ナビバー
+        navBar.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 80)
+        navBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
+        view.addSubview(navBar)
+
+        // ボタン作成
+        closeButton = UIBarButtonItem(title: "×", style: .plain, target: self, action: #selector(closeTapped))
+        saveButton = UIBarButtonItem(title: "保存", style: .plain, target: self, action: #selector(saveTapped))
+        cancelButton = UIBarButtonItem(title: "キャンセル", style: .plain, target: self, action: #selector(cancelEditing))
+
+        let navItem = UINavigationItem(title: "")
+        navItem.leftBarButtonItems = [closeButton]
+        navItem.rightBarButtonItems = [saveButton]
+        navBar.items = [navItem]
+
+        // ツールバー
+        toolBar.frame = CGRect(x: 0, y: view.bounds.height - 80, width: view.bounds.width, height: 80)
+        toolBar.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
+        view.addSubview(toolBar)
+
+        // ボタン作成
+        editButton = UIBarButtonItem(title: "編集", style: .plain, target: self, action: #selector(editTapped))
+        deleteButton = UIBarButtonItem(title: "削除", style: .plain, target: self, action: #selector(deleteTapped))
+        filterButton = UIBarButtonItem(title: "フィルター", style: .plain, target: self, action: #selector(applyFilter))
+        rotateButton = UIBarButtonItem(title: "回転", style: .plain, target: self, action: #selector(rotateImage))
+
+        // 初期は通常モード
+        toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: false)
+
+    }
+    
+    private func updateUIState() {
+        switch uiState {
+        case .normal:
+            navBar.isHidden = false
+            toolBar.isHidden = false
+            navBar.topItem?.leftBarButtonItems = [closeButton]
+            navBar.topItem?.rightBarButtonItems = [saveButton]
+            toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: true)
+            
+        case .editing:
+            navBar.isHidden = false
+            toolBar.isHidden = false
+            navBar.topItem?.leftBarButtonItems = [cancelButton]
+            navBar.topItem?.rightBarButtonItems = [saveButton]
+            toolBar.setItems([filterButton, UIBarButtonItem.flexibleSpace(), rotateButton], animated: true)
+            
+        case .hidden:
+            navBar.isHidden = true
+            toolBar.isHidden = true
+        case .saving:
+            break
+        }
+    }
 
     @objc private func applyFilter() {
         print("フィルター適用")
@@ -265,23 +302,5 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     @objc private func rotateImage() {
         print("画像回転")
     }
-    private func updateUIState() {
-        switch uiState {
-        case .normal:
-            navBar.topItem?.leftBarButtonItems = [closeButton]
-            navBar.topItem?.rightBarButtonItems = [saveButton]
-            toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: true)
-        case .editing:
-            navBar.topItem?.leftBarButtonItems = [cancelButton]
-            navBar.topItem?.rightBarButtonItems = [saveButton]
-            toolBar.setItems([filterButton, UIBarButtonItem.flexibleSpace(), rotateButton], animated: true)
-        case .hidden:
-            navBar.alpha = 0
-            toolBar.alpha = 0
-        case .saving: break
-        }
-    }
-
-
     
 }
