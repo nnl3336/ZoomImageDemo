@@ -49,8 +49,8 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     //編集バー
     
     private let editingPanel = UIView()
-    private let saveButton = UIButton(type: .system)
-    private let cancelButton = UIButton(type: .system)
+//    private let saveButton = UIButton(type: .system)
+//    private let cancelButton = UIButton(type: .system)
 
     private func setupEditingPanel() {
         editingPanel.frame = CGRect(x: 0, y: view.bounds.height - 100, width: view.bounds.width, height: 100)
@@ -147,62 +147,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     private let navBarView = UIView()
     private let toolBarView = UIView()
 
-    private func setupBars() {
-        // MARK: - ナビバー（上）
-        navBarView.frame = CGRect(x: 0, y: 0,
-                                  width: view.bounds.width, height: 80)
-        navBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
-        navBarView.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
-        view.addSubview(navBarView)
-
-        // Close
-        let close = UIButton(type: .system)
-        close.setTitle("×", for: .normal)
-        close.titleLabel?.font = UIFont.systemFont(ofSize: 30)
-        close.tintColor = .white
-        close.frame = CGRect(x: 10, y: 30, width: 50, height: 40)
-        close.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        navBarView.addSubview(close)
-
-        // 保存ボタン
-        let save = UIButton(type: .system)
-        save.setTitle("保存", for: .normal)
-        save.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
-        save.tintColor = .white
-        save.frame = CGRect(x: navBarView.bounds.width - 80, y: 30, width: 70, height: 40)
-        save.autoresizingMask = [.flexibleLeftMargin]
-        save.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
-        navBarView.addSubview(save)
-
-        // MARK: - ツールバー（下）
-        toolBarView.frame = CGRect(x: 0,
-                                   y: view.bounds.height - 80,
-                                   width: view.bounds.width,
-                                   height: 80)
-        toolBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
-        toolBarView.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
-        view.addSubview(toolBarView)
-
-        // 編集ボタン
-        let edit = UIButton(type: .system)
-        edit.setTitle("編集", for: .normal)
-        edit.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
-        edit.tintColor = .white
-        edit.frame = CGRect(x: 20, y: 20, width: 80, height: 40)
-        edit.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
-        toolBarView.addSubview(edit)
-
-        // 削除ボタン
-        let delete = UIButton(type: .system)
-        delete.setTitle("削除", for: .normal)
-        delete.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
-        delete.tintColor = .white
-        delete.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20,
-                              width: 80, height: 40)
-        delete.autoresizingMask = [.flexibleLeftMargin]
-        delete.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
-        toolBarView.addSubview(delete)
-    }
+    
     @objc private func closeTapped() {
         dismiss(animated: true)
     }
@@ -301,106 +246,70 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     
     //updateState
     
-    private func updateUIState() {
-        switch uiState {
-        case .normal:
-            UIView.animate(withDuration: 0.25) {
-                self.navBarView.alpha = 1
-                self.toolBarView.alpha = 1
-            }
-            // ナビバーのボタン
-            showNormalNavBarButtons()
-            // ツールバーのボタン
-            showNormalToolBarButtons()
+    // MARK: - プロパティで保持
+    private let closeButton = UIButton(type: .system)
+    private let saveButton = UIButton(type: .system)
+    private let cancelButton = UIButton(type: .system)
+    private let editButton = UIButton(type: .system)
+    private let deleteButton = UIButton(type: .system)
+    private let filterButton = UIButton(type: .system)
+    private let rotateButton = UIButton(type: .system)
 
-        case .hidden:
-            UIView.animate(withDuration: 0.25) {
-                self.navBarView.alpha = 0
-                self.toolBarView.alpha = 0
-            }
+    // MARK: - setupBars内で初期化
+    private func setupBars() {
+        // ナビバー
+        navBarView.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 80)
+        navBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        view.addSubview(navBarView)
 
-        case .editing:
-            UIView.animate(withDuration: 0.25) {
-                self.navBarView.alpha = 1
-                self.toolBarView.alpha = 1
-            }
-            // ナビバーのボタン差し替え
-            showEditingNavBarButtons()
-            // ツールバーのボタン差し替え
-            showEditingToolBarButtons()
+        // ボタン初期設定
+        closeButton.setTitle("×", for: .normal)
+        closeButton.frame = CGRect(x: 10, y: 30, width: 50, height: 40)
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        navBarView.addSubview(closeButton)
 
-        case .saving:
-            break
-        }
-    }
+        saveButton.setTitle("保存", for: .normal)
+        saveButton.frame = CGRect(x: navBarView.bounds.width - 80, y: 30, width: 70, height: 40)
+        saveButton.autoresizingMask = [.flexibleLeftMargin]
+        saveButton.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
+        navBarView.addSubview(saveButton)
 
-    // 例: ボタン差し替え
-    private func showNormalNavBarButtons() {
-        // 既存ボタンを削除
-        navBarView.subviews.forEach { $0.removeFromSuperview() }
+        cancelButton.setTitle("キャンセル", for: .normal)
+        cancelButton.frame = CGRect(x: 10, y: 30, width: 80, height: 40)
+        cancelButton.addTarget(self, action: #selector(cancelEditing), for: .touchUpInside)
+        navBarView.addSubview(cancelButton)
 
-        let close = UIButton(type: .system)
-        close.setTitle("×", for: .normal)
-        close.frame = CGRect(x: 10, y: 30, width: 50, height: 40)
-        close.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        navBarView.addSubview(close)
+        // ツールバー
+        toolBarView.frame = CGRect(x: 0, y: view.bounds.height - 80, width: view.bounds.width, height: 80)
+        toolBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        view.addSubview(toolBarView)
 
-        let save = UIButton(type: .system)
-        save.setTitle("保存", for: .normal)
-        save.frame = CGRect(x: navBarView.bounds.width - 80, y: 30, width: 70, height: 40)
-        save.autoresizingMask = [.flexibleLeftMargin]
-        save.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
-        navBarView.addSubview(save)
-    }
+        editButton.setTitle("編集", for: .normal)
+        editButton.frame = CGRect(x: 20, y: 20, width: 80, height: 40)
+        editButton.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
+        toolBarView.addSubview(editButton)
 
-    private func showEditingNavBarButtons() {
-        navBarView.subviews.forEach { $0.removeFromSuperview() }
+        deleteButton.setTitle("削除", for: .normal)
+        deleteButton.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20, width: 80, height: 40)
+        deleteButton.autoresizingMask = [.flexibleLeftMargin]
+        deleteButton.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
+        toolBarView.addSubview(deleteButton)
 
-        let cancel = UIButton(type: .system)
-        cancel.setTitle("キャンセル", for: .normal)
-        cancel.frame = CGRect(x: 10, y: 30, width: 80, height: 40)
-        cancel.addTarget(self, action: #selector(cancelEditing), for: .touchUpInside)
-        navBarView.addSubview(cancel)
+        filterButton.setTitle("フィルター", for: .normal)
+        filterButton.frame = CGRect(x: 20, y: 20, width: 100, height: 40)
+        filterButton.addTarget(self, action: #selector(applyFilter), for: .touchUpInside)
+        toolBarView.addSubview(filterButton)
 
-        let save = UIButton(type: .system)
-        save.setTitle("保存", for: .normal)
-        save.frame = CGRect(x: navBarView.bounds.width - 80, y: 30, width: 70, height: 40)
-        save.autoresizingMask = [.flexibleLeftMargin]
-        save.addTarget(self, action: #selector(saveEditedImage), for: .touchUpInside)
-        navBarView.addSubview(save)
-    }
-    private func showNormalToolBarButtons() {
-        toolBarView.subviews.forEach { $0.removeFromSuperview() }
+        rotateButton.setTitle("回転", for: .normal)
+        rotateButton.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20, width: 80, height: 40)
+        rotateButton.autoresizingMask = [.flexibleLeftMargin]
+        rotateButton.addTarget(self, action: #selector(rotateImage), for: .touchUpInside)
+        toolBarView.addSubview(rotateButton)
 
-        let edit = UIButton(type: .system)
-        edit.setTitle("編集", for: .normal)
-        edit.frame = CGRect(x: 20, y: 20, width: 80, height: 40)
-        edit.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
-        toolBarView.addSubview(edit)
-
-        let delete = UIButton(type: .system)
-        delete.setTitle("削除", for: .normal)
-        delete.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20, width: 80, height: 40)
-        delete.autoresizingMask = [.flexibleLeftMargin]
-        delete.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
-        toolBarView.addSubview(delete)
-    }
-
-    private func showEditingToolBarButtons() {
-        toolBarView.subviews.forEach { $0.removeFromSuperview() }
-
-        let filter = UIButton(type: .system)
-        filter.setTitle("フィルター", for: .normal)
-        filter.frame = CGRect(x: 20, y: 20, width: 100, height: 40)
-        filter.addTarget(self, action: #selector(applyFilter), for: .touchUpInside)
-        toolBarView.addSubview(filter)
-
-        let rotate = UIButton(type: .system)
-        rotate.setTitle("回転", for: .normal)
-        rotate.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20, width: 80, height: 40)
-        rotate.autoresizingMask = [.flexibleLeftMargin]
-        rotate.addTarget(self, action: #selector(rotateImage), for: .touchUpInside)
-        toolBarView.addSubview(rotate)
+        // 最初は編集用ボタンを非表示
+        cancelButton.isHidden = true
+        filterButton.isHidden = true
+        rotateButton.isHidden = true
     }
     @objc private func applyFilter() {
         print("フィルター適用")
@@ -409,6 +318,46 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     @objc private func rotateImage() {
         print("画像回転")
     }
+    private func updateUIState() {
+        switch uiState {
+        case .normal:
+            navBarView.alpha = 1
+            toolBarView.alpha = 1
+
+            // ナビバー
+            closeButton.isHidden = false
+            saveButton.isHidden = false
+            cancelButton.isHidden = true
+
+            // ツールバー
+            editButton.isHidden = false
+            deleteButton.isHidden = false
+            filterButton.isHidden = true
+            rotateButton.isHidden = true
+
+        case .editing:
+            navBarView.alpha = 1
+            toolBarView.alpha = 1
+
+            // ナビバー
+            closeButton.isHidden = true
+            saveButton.isHidden = false
+            cancelButton.isHidden = false
+
+            // ツールバー
+            editButton.isHidden = true
+            deleteButton.isHidden = true
+            filterButton.isHidden = false
+            rotateButton.isHidden = false
+
+        case .hidden:
+            navBarView.alpha = 0
+            toolBarView.alpha = 0
+        case .saving:
+            break
+        }
+    }
+
 
     
 }
