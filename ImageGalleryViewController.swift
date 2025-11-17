@@ -100,31 +100,89 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     //setupData
     //fetch
     //setupUI
-    private func updateUIState() {
-        /*switch uiState {
-        case .normal:
-            UIView.animate(withDuration: 0.25) {
-                self.navBar.alpha = 1
-                self.toolBar.alpha = 1
-            }
+    //setupBars
+    //基本プロパティ
+    private let navBarView = UIView()
+    private let toolBarView = UIView()
 
-        case .hidden:
-            UIView.animate(withDuration: 0.25) {
-                self.navBar.alpha = 0
-                self.toolBar.alpha = 0
-            }
+    private func setupBars() {
+        // MARK: - ナビバー（上）
+        navBarView.frame = CGRect(x: 0, y: 0,
+                                  width: view.bounds.width, height: 80)
+        navBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        navBarView.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
+        view.addSubview(navBarView)
 
-        case .editing:
-            UIView.animate(withDuration: 0.25) {
-                self.navBar.alpha = 0
-                self.toolBar.alpha = 0
-            }
-            showEditingPanel()  // ← 加工UIを出す
+        // Close
+        let close = UIButton(type: .system)
+        close.setTitle("×", for: .normal)
+        close.titleLabel?.font = UIFont.systemFont(ofSize: 30)
+        close.tintColor = .white
+        close.frame = CGRect(x: 10, y: 30, width: 50, height: 40)
+        close.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        navBarView.addSubview(close)
 
-        case .saving:
-            showSavingIndicator()
-        }*/
+        // 保存ボタン
+        let save = UIButton(type: .system)
+        save.setTitle("保存", for: .normal)
+        save.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        save.tintColor = .white
+        save.frame = CGRect(x: navBarView.bounds.width - 80, y: 30, width: 70, height: 40)
+        save.autoresizingMask = [.flexibleLeftMargin]
+        save.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
+        navBarView.addSubview(save)
+
+
+
+        // MARK: - ツールバー（下）
+        toolBarView.frame = CGRect(x: 0,
+                                   y: view.bounds.height - 80,
+                                   width: view.bounds.width,
+                                   height: 80)
+        toolBarView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        toolBarView.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
+        view.addSubview(toolBarView)
+
+        // 編集ボタン
+        let edit = UIButton(type: .system)
+        edit.setTitle("編集", for: .normal)
+        edit.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        edit.tintColor = .white
+        edit.frame = CGRect(x: 20, y: 20, width: 80, height: 40)
+        edit.addTarget(self, action: #selector(editTapped), for: .touchUpInside)
+        toolBarView.addSubview(edit)
+
+        // 削除ボタン
+        let delete = UIButton(type: .system)
+        delete.setTitle("削除", for: .normal)
+        delete.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        delete.tintColor = .white
+        delete.frame = CGRect(x: toolBarView.bounds.width - 100, y: 20,
+                              width: 80, height: 40)
+        delete.autoresizingMask = [.flexibleLeftMargin]
+        delete.addTarget(self, action: #selector(deleteTapped), for: .touchUpInside)
+        toolBarView.addSubview(delete)
     }
+    @objc private func closeTapped() {
+        dismiss(animated: true)
+    }
+
+    @objc private func saveTapped() {
+        // 保存処理（後で実装）
+        print("保存 tapped")
+    }
+
+    @objc private func editTapped() {
+        // 編集モードへ
+        uiState = .editing
+    }
+
+    @objc private func deleteTapped() {
+        // 削除のアクション
+        print("削除 tapped")
+    }
+
+
     @objc private func toggleBars() {
         switch uiState {
         case .normal:
@@ -135,6 +193,32 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             break
         }
     }
+    private func updateUIState() {
+        switch uiState {
+        case .normal:
+            UIView.animate(withDuration: 0.25) {
+                self.navBarView.alpha = 1
+                self.toolBarView.alpha = 1
+            }
+
+        case .hidden:
+            UIView.animate(withDuration: 0.25) {
+                self.navBarView.alpha = 0
+                self.toolBarView.alpha = 0
+            }
+
+        case .editing:
+            UIView.animate(withDuration: 0.25) {
+                self.navBarView.alpha = 0
+                self.toolBarView.alpha = 0
+            }
+            //showEditingPanel()      // ← 後で作る加工UI
+
+        case .saving: break
+            //showSavingIndicator()    // ← 後で作る保存アニメーション
+        }
+    }
+
 
 
     //setupNavBar
