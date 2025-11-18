@@ -223,9 +223,9 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     }
     
     //updateState
-    
     // MARK: - ナビゲーションバーとツールバーのプロパティ
     private let navBar = UINavigationBar()
+    private let editNavBarView = UIView() // 編集モード用バー
     private let toolBar = UIToolbar()
 
     // ナビバーのボタン
@@ -240,12 +240,11 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     private var rotateButton: UIBarButtonItem!
     
     private func setupBars() {
-        // ナビバー
+        // ---- 通常ナビバー ----
         navBar.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 80)
         navBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
         view.addSubview(navBar)
 
-        // ボタン作成
         closeButton = UIBarButtonItem(title: "×", style: .plain, target: self, action: #selector(closeTapped))
         saveButton = UIBarButtonItem(title: "保存", style: .plain, target: self, action: #selector(saveTapped))
         cancelButton = UIBarButtonItem(title: "キャンセル", style: .plain, target: self, action: #selector(cancelEditing))
@@ -255,41 +254,56 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         navItem.rightBarButtonItems = [saveButton]
         navBar.items = [navItem]
 
-        // ツールバー
+        // ---- 編集ナビバー（完全別UI） ----
+        editNavBarView.frame = navBar.frame
+        editNavBarView.backgroundColor = .systemGray6
+        editNavBarView.isHidden = true
+        view.addSubview(editNavBarView)
+
+        let label = UILabel(frame: CGRect(x: 16, y: 40, width: 200, height: 40))
+        label.text = "編集中"
+        label.font = .boldSystemFont(ofSize: 20)
+        editNavBarView.addSubview(label)
+
+        // ---- ツールバー ----
         toolBar.frame = CGRect(x: 0, y: view.bounds.height - 80, width: view.bounds.width, height: 80)
         toolBar.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
         view.addSubview(toolBar)
 
-        // ボタン作成
         editButton = UIBarButtonItem(title: "編集", style: .plain, target: self, action: #selector(editTapped))
         deleteButton = UIBarButtonItem(title: "削除", style: .plain, target: self, action: #selector(deleteTapped))
         filterButton = UIBarButtonItem(title: "フィルター", style: .plain, target: self, action: #selector(applyFilter))
         rotateButton = UIBarButtonItem(title: "回転", style: .plain, target: self, action: #selector(rotateImage))
 
-        // 初期は通常モード
         toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: false)
-
     }
-    
+
     private func updateUIState() {
         switch uiState {
+
         case .normal:
             navBar.isHidden = false
-            toolBar.isHidden = false
-            navBar.topItem?.leftBarButtonItems = [closeButton]
-            navBar.topItem?.rightBarButtonItems = [saveButton]
-            toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: true)
-            
+            editNavBarView.isHidden = true
+
+            toolBar.setItems(
+                [editButton, UIBarButtonItem.flexibleSpace(), deleteButton],
+                animated: true
+            )
+
         case .editing:
-            navBar.isHidden = false
-            toolBar.isHidden = false
-            navBar.topItem?.leftBarButtonItems = [cancelButton]
-            navBar.topItem?.rightBarButtonItems = [saveButton]
-            toolBar.setItems([filterButton, UIBarButtonItem.flexibleSpace(), rotateButton], animated: true)
-            
+            navBar.isHidden = true
+            editNavBarView.isHidden = false
+
+            toolBar.setItems(
+                [filterButton, UIBarButtonItem.flexibleSpace(), rotateButton],
+                animated: true
+            )
+
         case .hidden:
             navBar.isHidden = true
             toolBar.isHidden = true
+            editNavBarView.isHidden = true
+
         case .saving:
             break
         }
