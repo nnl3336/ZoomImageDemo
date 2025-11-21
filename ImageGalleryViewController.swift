@@ -139,6 +139,11 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         // ナビバー・ツールバーを隠して編集パネルを表示
         uiState = .editing
         //editingPanel.isHidden = false
+        
+        // ★ここでアニメーションを呼ぶ
+        if let cell = collectionView.visibleCells.first as? ImageZoomCell {
+            cell.animateToEditingSize()
+        }
     }
 
     @objc private func deleteTapped() {

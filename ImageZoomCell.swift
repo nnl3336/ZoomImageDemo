@@ -13,32 +13,70 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
     
     //画像小さく
     
+    func animateToEditingSize() {
+        let scrollView = self.scrollView
+        scrollView.isScrollEnabled = false
+
+        let targetScale: CGFloat = 0.8
+
+        UIView.animate(withDuration: 0.25) {
+            // 中央に向かって transform で縮小
+            self.imageView.center = CGPoint(
+                x: scrollView.bounds.midX,
+                y: scrollView.bounds.midY
+            )
+            self.imageView.transform = CGAffineTransform(scaleX: targetScale, y: targetScale)
+        } completion: { _ in
+            // ★ここでは zoomScale を変えない
+            // ★transform も元に戻さない
+            self.centerImageView()
+            scrollView.isScrollEnabled = true
+        }
+    }
+
+
     func centerImageView() {
-        guard let image = imageView.image else { return }
+        let scrollView = self.scrollView
+        let boundsSize = scrollView.bounds.size
+        var frameToCenter = self.imageView.frame
 
-        let scrollSize = scrollView.bounds.size
-        let imageSize = imageView.frame.size
+        // 縦方向
+        if frameToCenter.size.height < boundsSize.height {
+            frameToCenter.origin.y = (boundsSize.height - frameToCenter.size.height) / 2
+        } else {
+            frameToCenter.origin.y = 0
+        }
 
-        let verticalInset = max(0, (scrollSize.height - imageSize.height) / 2)
-        let horizontalInset = max(0, (scrollSize.width - imageSize.width) / 2)
+        // 横方向
+        if frameToCenter.size.width < boundsSize.width {
+            frameToCenter.origin.x = (boundsSize.width - frameToCenter.size.width) / 2
+        } else {
+            frameToCenter.origin.x = 0
+        }
 
-        scrollView.contentInset = UIEdgeInsets(
-            top: verticalInset,
-            left: horizontalInset,
-            bottom: verticalInset,
-            right: horizontalInset
-        )
+        self.imageView.frame = frameToCenter
     }
     
     // 編集モード = 画像を少し小さくする
     func setEditingMode(_ isEditing: Bool) {
+        let targetScale: CGFloat = isEditing ? 0.8 : 1.0
+
+        // アニメーション内で bounds / center に変換
         UIView.animate(withDuration: 0.25) {
-            let scale: CGFloat = isEditing ? 0.8 : 1.0
-            self.scrollView.setZoomScale(scale, animated: false)
+            let newWidth = self.scrollView.bounds.width * targetScale
+            let newHeight = self.scrollView.bounds.height * targetScale
+            self.imageView.bounds.size = CGSize(width: newWidth, height: newHeight)
+            self.imageView.center = CGPoint(
+                x: self.scrollView.bounds.midX,
+                y: self.scrollView.bounds.midY
+            )
         } completion: { _ in
+            // transform はリセット
+            self.imageView.transform = .identity
             self.centerImageView()
         }
     }
+    
     
     //
     
