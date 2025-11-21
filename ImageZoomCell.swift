@@ -11,6 +11,35 @@ import Photos
 // MARK: - Zoomable Cell
 class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
     
+    //画像小さく
+    
+    func centerImageView() {
+        guard let image = imageView.image else { return }
+
+        let scrollSize = scrollView.bounds.size
+        let imageSize = imageView.frame.size
+
+        let verticalInset = max(0, (scrollSize.height - imageSize.height) / 2)
+        let horizontalInset = max(0, (scrollSize.width - imageSize.width) / 2)
+
+        scrollView.contentInset = UIEdgeInsets(
+            top: verticalInset,
+            left: horizontalInset,
+            bottom: verticalInset,
+            right: horizontalInset
+        )
+    }
+    
+    // 編集モード = 画像を少し小さくする
+    func setEditingMode(_ isEditing: Bool) {
+        UIView.animate(withDuration: 0.25) {
+            let scale: CGFloat = isEditing ? 0.8 : 1.0
+            self.scrollView.setZoomScale(scale, animated: false)
+        } completion: { _ in
+            self.centerImageView()
+        }
+    }
+    
     //
     
     @objc private func editAndSave() {
@@ -63,7 +92,7 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
         super.init(frame: frame)
         scrollView.frame = contentView.bounds
         scrollView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        scrollView.minimumZoomScale = 1
+        scrollView.minimumZoomScale = 0.5
         scrollView.maximumZoomScale = 3
         scrollView.delegate = self
         contentView.addSubview(scrollView)

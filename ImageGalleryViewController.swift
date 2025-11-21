@@ -279,7 +279,6 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             navBar.heightAnchor.constraint(equalToConstant: 44)
         ])
 
-        
         // ---- 編集ナビバー ----
         editNavBarView.translatesAutoresizingMaskIntoConstraints = false
         editNavBarView.backgroundColor = .black
@@ -359,30 +358,57 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
         case .normal:
             navBar.isHidden = false
             editNavBarView.isHidden = true
+            toolBar.isHidden = false
 
             toolBar.setItems(
                 [editButton, UIBarButtonItem.flexibleSpace(), deleteButton],
                 animated: true
             )
 
+            // 画像を元サイズに戻す
+            updateVisibleCellEditing(false)
+
         case .editing:
             navBar.isHidden = true
             editNavBarView.isHidden = false
+            toolBar.isHidden = false
 
             toolBar.setItems(
                 [filterButton, UIBarButtonItem.flexibleSpace(), rotateButton],
                 animated: true
             )
 
+            // 編集モード → 画像を小さく
+            updateVisibleCellEditing(true)
+
         case .hidden:
             navBar.isHidden = true
             toolBar.isHidden = true
             editNavBarView.isHidden = true
 
+            // hidden の場合も縮小を解除
+            updateVisibleCellEditing(false)
+
         case .saving:
             break
         }
     }
+
+    private func updateVisibleCellEditing(_ editing: Bool) {
+        for cell in collectionView.visibleCells {
+            if let zoomCell = cell as? ImageZoomCell {
+                zoomCell.setEditingMode(editing)
+            }
+        }
+    }
+    /*
+     private func updateVisibleCellEditing(_ editing: Bool) {
+         for cell in collectionView.visibleCells {
+             (cell as? ImageZoomCell)?.setEditingMode(editing)
+         }
+     }
+     */
+
 
     @objc private func applyFilter() {
         print("フィルター適用")
