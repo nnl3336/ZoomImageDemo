@@ -241,43 +241,117 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
     
     private func setupBars() {
         // ---- 通常ナビバー ----
-        navBar.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 80)
-        navBar.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
+        navBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(navBar)
 
-        closeButton = UIBarButtonItem(title: "×", style: .plain, target: self, action: #selector(closeTapped))
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .black
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+
+        navBar.standardAppearance = appearance
+        navBar.scrollEdgeAppearance = appearance
+        navBar.compactAppearance = appearance
+        navBar.tintColor = .white
+
+        // 左ボタン（閉じる）
+        let closeBtn = UIButton(type: .system)
+        closeBtn.setTitle("×", for: .normal)
+        closeBtn.titleLabel?.font = UIFont.systemFont(ofSize: 28, weight: .bold)
+        closeBtn.tintColor = .white
+        closeBtn.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        let closeButton = UIBarButtonItem(customView: closeBtn)
+
+        // 右ボタン（保存）
         saveButton = UIBarButtonItem(title: "保存", style: .plain, target: self, action: #selector(saveTapped))
-        cancelButton = UIBarButtonItem(title: "キャンセル", style: .plain, target: self, action: #selector(cancelEditing))
+        saveButton.tintColor = .white
 
         let navItem = UINavigationItem(title: "")
         navItem.leftBarButtonItems = [closeButton]
         navItem.rightBarButtonItems = [saveButton]
         navBar.items = [navItem]
 
-        // ---- 編集ナビバー（完全別UI） ----
-        editNavBarView.frame = navBar.frame
-        editNavBarView.backgroundColor = .systemGray6
+        // AutoLayout
+        NSLayoutConstraint.activate([
+            navBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            navBar.heightAnchor.constraint(equalToConstant: 44)
+        ])
+
+        // ---- 編集ナビバー ----
+        editNavBarView.translatesAutoresizingMaskIntoConstraints = false
+        editNavBarView.backgroundColor = .black
         editNavBarView.isHidden = true
         view.addSubview(editNavBarView)
 
-        let label = UILabel(frame: CGRect(x: 16, y: 40, width: 200, height: 40))
+        NSLayoutConstraint.activate([
+            editNavBarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            editNavBarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            editNavBarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            editNavBarView.heightAnchor.constraint(equalToConstant: 44)
+        ])
+
+        // 編集バー中央タイトル
+        let label = UILabel()
         label.text = "編集中"
+        label.textColor = .white
         label.font = .boldSystemFont(ofSize: 20)
+        label.translatesAutoresizingMaskIntoConstraints = false
         editNavBarView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: editNavBarView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: editNavBarView.centerYAnchor)
+        ])
+
+        // 編集バー右：保存
+        let saveBtn = UIButton(type: .system)
+        saveBtn.setTitle("保存", for: .normal)
+        saveBtn.titleLabel?.font = .boldSystemFont(ofSize: 18)
+        saveBtn.tintColor = .white
+        saveBtn.addTarget(self, action: #selector(saveTapped), for: .touchUpInside)
+        saveBtn.translatesAutoresizingMaskIntoConstraints = false
+        editNavBarView.addSubview(saveBtn)
+        NSLayoutConstraint.activate([
+            saveBtn.trailingAnchor.constraint(equalTo: editNavBarView.trailingAnchor, constant: -16),
+            saveBtn.centerYAnchor.constraint(equalTo: editNavBarView.centerYAnchor)
+        ])
+
+        // 編集バー左：キャンセル
+        let cancelBtn = UIButton(type: .system)
+        cancelBtn.setTitle("キャンセル", for: .normal)
+        cancelBtn.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelBtn.tintColor = .white
+        cancelBtn.addTarget(self, action: #selector(cancelEditing), for: .touchUpInside)
+        cancelBtn.translatesAutoresizingMaskIntoConstraints = false
+        editNavBarView.addSubview(cancelBtn)
+        NSLayoutConstraint.activate([
+            cancelBtn.leadingAnchor.constraint(equalTo: editNavBarView.leadingAnchor, constant: 16),
+            cancelBtn.centerYAnchor.constraint(equalTo: editNavBarView.centerYAnchor)
+        ])
 
         // ---- ツールバー ----
-        toolBar.frame = CGRect(x: 0, y: view.bounds.height - 80, width: view.bounds.width, height: 80)
-        toolBar.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
+        toolBar.translatesAutoresizingMaskIntoConstraints = false
+        toolBar.barTintColor = .black
+        toolBar.tintColor = .white
+        toolBar.isTranslucent = false
         view.addSubview(toolBar)
 
         editButton = UIBarButtonItem(title: "編集", style: .plain, target: self, action: #selector(editTapped))
         deleteButton = UIBarButtonItem(title: "削除", style: .plain, target: self, action: #selector(deleteTapped))
         filterButton = UIBarButtonItem(title: "フィルター", style: .plain, target: self, action: #selector(applyFilter))
         rotateButton = UIBarButtonItem(title: "回転", style: .plain, target: self, action: #selector(rotateImage))
-
         toolBar.setItems([editButton, UIBarButtonItem.flexibleSpace(), deleteButton], animated: false)
+
+        NSLayoutConstraint.activate([
+            toolBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            toolBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolBar.heightAnchor.constraint(equalToConstant: 80)
+        ])
     }
 
+    
     private func updateUIState() {
         switch uiState {
 
