@@ -279,6 +279,7 @@ class GalleryViewController: UIViewController, UICollectionViewDataSource, UICol
             navBar.heightAnchor.constraint(equalToConstant: 44)
         ])
 
+        
         // ---- 編集ナビバー ----
         editNavBarView.translatesAutoresizingMaskIntoConstraints = false
         editNavBarView.backgroundColor = .black
