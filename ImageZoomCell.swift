@@ -57,6 +57,7 @@ class ImageZoomCell: UICollectionViewCell, UIScrollViewDelegate {
         self.imageView.frame = frameToCenter
     }
     
+    
     // 編集モード = 画像を少し小さくする
     func setEditingMode(_ isEditing: Bool) {
         let targetScale: CGFloat = isEditing ? 0.8 : 1.0
